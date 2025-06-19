@@ -251,7 +251,8 @@ spawnRocket() {
     }
                 console.log('Rocket eklendi miiii', x, y);
 
-  let rocket = this.physics.add.sprite(200, 200, 'rocket').setScale(0.8);
+ let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8);
+
 console.log('Rocket:', rocket, 'Body:', rocket.body);
         console.log('Rocket eklendi', x, y, rocket);
     rocket.body.setVelocity(vx, vy);
