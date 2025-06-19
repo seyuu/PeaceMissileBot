@@ -238,7 +238,8 @@ spawnRocket() {
     let speed = Phaser.Math.Between(170, 260);
     let entrySide = Phaser.Math.Between(0, 4);
 
-    let vx = 0, vy = 0;
+       let x = 0, y = 0, vx = 0, vy = 0;
+
     if (entrySide <= 2) {
     x = target.x; y = 0;
     vx = 0; vy = speed;
