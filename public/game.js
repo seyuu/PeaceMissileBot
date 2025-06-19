@@ -221,9 +221,35 @@ console.log("BUILDING COORDS (should be array):", this.buildingCoords);
     this.events.on('update', this.updateHealthBar, this);
   }
 
-  spawnRocket() {
-  let x = 200, y = 200;
-  let rocket = this.add.rectangle(x, y, 30, 60, 0xff0000);
+spawnRocket() {
+    console.log('spawnRocket çağrıldı');
+    const w = this.cameras.main.width;
+    const h = this.cameras.main.height;
+    let targetIdx = Phaser.Math.Between(0, this.buildingCoords.length - 1);
+    let target = this.buildingCoords[targetIdx];
+    let speed = Phaser.Math.Between(170, 260);
+    let entrySide = Phaser.Math.Between(0, 4);
+
+    let x, y, vx = 0, vy = 0;
+    if (entrySide <= 2) {
+      x = target.x; y = -40;
+      vx = 0; vy = speed;
+    } else if (entrySide === 3) {
+      x = -40; y = target.y;
+      vx = speed; vy = 0;
+    } else {
+      x = w + 40; y = target.y;
+      vx = -speed; vy = 0;
+    }
+
+    let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
+        console.log('Rocket eklendi', x, y, rocket);
+    rocket.body.setVelocity(vx, vy);
+        console.log('setVelocity eklendi', xv, yv, rocket);
+    rocket.targetIdx = targetIdx;
+    this.rockets.add(rocket);
+
+    this.physics.add.overlap(rocket, this.buildings[targetIdx].sprite, () => this.hitBuilding(rocket, targetIdx));
 }
 
 
