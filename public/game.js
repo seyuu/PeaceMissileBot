@@ -68,46 +68,58 @@ let globalUserData = {
 
 // --- Lobby/Menu Scene ---
 class LobbyScene extends Phaser.Scene {
-    constructor() { super({ key: 'LobbyScene' }); }
-    preload() {
-        this.load.image('lobby_bg', assets.lobby_bg);
-        this.load.image('logo', assets.logo);
-        this.load.image('score_icon', assets.score_icon);
-        this.load.image('coin', assets.coin);
-    }
-    create() {
-        this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, 'lobby_bg')
-            .setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+  constructor() { super('LobbyScene'); }
+  async create() {
+    const vars = getScaleVars(this);
 
-        // Logo animasyonu
-        this.add.image(this.cameras.main.centerX, 100, 'logo').setScale(0.7);
+    // BG tam ekran
+    this.add.image(vars.w/2, vars.h/2, 'bg_lobby').setDisplaySize(vars.w, vars.h);
 
-        // Kullanıcı bilgileri (örnek, gerçek veriyi Telegram WebApp'den al)
-        const user = globalUserData;
-        this.add.text(30, 180, `Welcome, ${user.username}!`, { font: '22px monospace', color: "#fff" });
-        this.add.image(40, 230, 'score_icon').setScale(0.8);
-        this.add.text(75, 222, `Max Score: ${user.maxScore}`, { font: '18px monospace', color: "#fff" });
-        this.add.text(220, 222, `Total Score: ${user.totalScore}`, { font: '18px monospace', color: "#fff" });
-        this.add.image(40, 265, 'coin').setScale(0.8);
-        this.add.text(75, 258, `PMNOFO Coins: ${user.coins}`, { font: '18px monospace', color: "#fff" });
+    await fetchUserStats();
 
-        // Bilgilendirme
-        this.add.text(30, 295, "Goal: Tap the rockets before they hit the buildings!\nTap Start to choose your side.", { font: '16px monospace', color: "#ffd" });
+    // SAĞ ÜST panel, PEACE'in üstünü kapatmaz!
+    let panelX = vars.w - vars.topPanelW - vars.margin;
+    let y = vars.margin;
+    let statColor = "#ffe349";
+    this.add.text(panelX, y, `Welcome, ${userStats.username || 'Player'}!`, { font: `${vars.fontSmall+2}px monospace`, fill: "#fff" }).setOrigin(0,0);
+    y += vars.fontSmall + 8;
+    this.add.text(panelX, y, `Max Score: ${userStats.score}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
+    y += vars.fontSmall + 4;
+    this.add.text(panelX, y, `Total Score: ${userStats.total_score}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
+    y += vars.fontSmall + 4;
+    this.add.text(panelX, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
 
-        // Start ve Leaderboard butonları
-        const startBtn = this.add.text(this.cameras.main.centerX, 340, "START MISSION", { font: '28px monospace', color: "#1df", backgroundColor: "#133" })
-            .setOrigin(0.5).setPadding(12).setInteractive();
-        startBtn.on('pointerdown', () => { this.scene.start('SideSelectScene'); });
+    // Start Mission butonu: ALTTA, ortada (hiçbir yazı üstüne binmez)
+    let btnY = vars.h * 0.60;
+    let startBtn = this.add.image(vars.w/2, btnY, 'button')
+      .setScale(vars.btnScale).setInteractive();
+    let btnLabel = this.add.text(vars.w, btnY, "", { font: `${vars.fontBig}px monospace`, fill: "#13f7f7" }).setOrigin(0.3);
+    startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
 
-        // Leaderboard Table
-        this.add.text(this.cameras.main.centerX, 390, "Top Players", { font: '20px monospace', color: "#ff0" }).setOrigin(0.5, 0);
-        let lb = user.leaderboard || [];
-        if (lb.length === 0) lb = [{ username: "Player1", totalScore: 1200 }, { username: "Player2", totalScore: 1100 }];
-        for (let i = 0; i < Math.min(5, lb.length); i++) {
-            this.add.text(this.cameras.main.centerX - 100, 420 + i * 28, `${i + 1}. ${lb[i].username} - ${lb[i].totalScore} pts`, { font: '16px monospace', color: "#fff" });
-        }
-    }
+    // Top Players — butonun üstünde, ortada
+    let lbY = btnY - 300;
+    this.add.text(vars.w/2, lbY, "Top Players", { font: `bold ${vars.fontMid+2}px monospace`, fill: "#ffe349" }).setOrigin(0.5, 0);
+    const leaders = (await fetchLeaderboard()).slice(0, 5);
+    lbY += vars.fontMid + 8;
+    leaders.forEach((u, i) => {
+      this.add.text(vars.w/2, lbY + i * (vars.fontSmall + 8), `${i + 1}. ${u.username || 'Anon'} - ${u.total_score} pts`, { font: `${vars.fontSmall+2}px monospace`, fill: "#fff" }).setOrigin(0.5, 0);
+    });
+
+    // Menü: Leaderboard & How to Play (aşağıda iki yana)
+    let menuY = btnY + startBtn.displayHeight/2 + 28;
+    this.add.text(vars.w/4, menuY, "Leaderboard", { font: `${vars.fontMid}px monospace`, fill: "#ffe349" })
+      .setOrigin(0.5,0)
+      .setInteractive().on('pointerup', () => this.scene.start('LeaderboardScene'));
+    this.add.text(vars.w - vars.w/4, menuY, "How to Play?", { font: `${vars.fontMid}px monospace`, fill: "#43c0f7" })
+      .setOrigin(0.5, 0)
+      .setInteractive().on('pointerup', () => this.scene.start('HowToPlayScene'));
+
+    // En altta BÜYÜK logo
+    this.add.image(vars.w/2, vars.h - 95, 'logo').setScale(vars.logoScale);
+  }
 }
+
+
 
 // --- Taraf Seçim ---
 class SideSelectScene extends Phaser.Scene {
