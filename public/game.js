@@ -175,136 +175,68 @@ class SideSelectScene extends Phaser.Scene {
 
 // --- Oyun Ana Sahnesi (Responsive rocket spawn, ekrana göre tam path) ---
 class GameScene extends Phaser.Scene {
-  constructor() {super({ key: 'GameScene', physics: { arcade: { debug: true } } }); }
+  constructor() { super({ key: 'GameScene', physics: { arcade: { debug: false } } }); }
   init(data) { this.side = data.side || 'israel'; }
 
   create() {
-    console.log('Physics:', this.physics);
-    console.log("Rocket var mı:", this.textures.exists('rocket'));
-  let testSprite = this.add.sprite(100, 100, 'rocket').setScale(0.8);
-  console.log("Test Sprite:", testSprite);
-
     const vars = getScaleVars(this);
-
-    // Responsive buildingCoords -- İLK BAŞTA!
     this.buildingCoords = getResponsiveBuildingCoords(vars.w, vars.h);
 
-    // Arkaplan
-    this.add.image(vars.w/2, vars.h/2, this.side === 'iran' ? 'bg_iran' : 'bg_israel').setDisplaySize(vars.w, vars.h);
-
-    // Skor ve health bar
-    this.score = 0;
-    this.add.text(vars.margin, vars.margin, "Score: ", { font: `${vars.fontMid}px monospace`, fill: "#fff" });
-    this.scoreText = this.add.text(vars.margin + 80, vars.margin, "0", { font: `${vars.fontMid}px monospace`, fill: "#fff" });
-
-    this.cityMaxHealth = this.buildingCoords.length * maxBuildingHealth;
-    this.cityHealth = this.cityMaxHealth;
-    let barW = vars.w * 0.58;
-    this.healthBarBg = this.add.rectangle(vars.w/2 - barW/2, vars.margin*2.3, barW, 18, 0x333333).setOrigin(0, 0.5);
-    this.healthBar = this.add.rectangle(vars.w/2 - barW/2, vars.margin*2.3, barW, 18, 0x1ff547).setOrigin(0, 0.5);
-
-    // Binalar
-    this.buildings = this.buildingCoords.map(coord => ({
-      x: coord.x,
-      y: coord.y,
-      health: maxBuildingHealth,
-      sprite: this.add.rectangle(coord.x, coord.y, 45, 40, 0x74b9ff, 0.2)
-    }));
-
-    this.destroyedSprites = [];
-    this.rockets = this.physics.add.group();
-console.log("BUILDING COORDS (should be array):", this.buildingCoords);
-    // Roketleri zamanlayıcı ile başlat
-    this.rocketTimer = this.time.addEvent({
-      delay: 1100, loop: true, callback: () => this.spawnRocket()
+    // --- Binalar ve üzerlerine bar ---
+    this.buildings = this.buildingCoords.map(coord => {
+      let group = {};
+      group.x = coord.x;
+      group.y = coord.y;
+      group.health = maxBuildingHealth;
+      // Bina görseli
+      group.sprite = this.add.rectangle(coord.x, coord.y, 45, 40, 0x74b9ff, 0.25);
+      // Health bar (üstünde)
+      group.barBg = this.add.rectangle(coord.x, coord.y - 35, 38, 6, 0x333333, 0.7);
+      group.bar = this.add.rectangle(coord.x, coord.y - 35, 36, 4, 0x1ff547, 0.99).setOrigin(0.5, 0.5);
+      return group;
     });
 
-    // Mouse/touch ile bomba patlat
-    this.input.on('gameobjectdown', (pointer, rocket) => {
-      if (rocket.texture && rocket.texture.key === 'rocket') {
-        this.explodeRocket(rocket);
+    this.rockets = this.physics.add.group();
+    this.score = 0;
+
+    // Oyun döngüsü — roketleri gönder
+    this.rocketTimer = this.time.addEvent({
+      delay: 1100,
+      loop: true,
+      callback: () => {
+        let idx = Phaser.Math.Between(0, this.buildings.length - 1);
+        let target = this.buildings[idx];
+
+        let x = target.x;
+        let y = 0;
+        let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
+        rocket.body.setVelocity(0, 230); // YUKARIDAN AŞAĞI HIZ
+        rocket.targetIdx = idx;
+        this.rockets.add(rocket);
+
+        // Çakışınca
+        this.physics.add.overlap(rocket, target.sprite, () => {
+          rocket.destroy();
+          // Bina health azalt
+          target.health--;
+          // Health bar güncelle
+          target.bar.width = Math.max(0, (target.health / maxBuildingHealth) * 36);
+          if (target.health <= 0) {
+            target.sprite.setFillStyle(0x333333, 0.35);
+            target.bar.setFillStyle(0xff2323);
+          }
+        });
       }
     });
 
-    this.events.on('update', this.updateHealthBar, this);
-  }
-
-spawnRocket() {
-    console.log('spawnRocket çağrıldı');
-    const w = this.cameras.main.width;
-    const h = this.cameras.main.height;
-    let targetIdx = Phaser.Math.Between(0, this.buildingCoords.length - 1);
-    let target = this.buildingCoords[targetIdx];
-    let speed = Phaser.Math.Between(170, 260);
-    let entrySide = Phaser.Math.Between(0, 4);
-
-       let x = 0, y = 0, vx = 0, vy = 0;
-
-    if (entrySide <= 2) {
-    x = target.x; y = 0;
-    vx = 0; vy = speed;
-    } else if (entrySide === 3) {
-    x = 0; y = target.y;
-    vx = speed; vy = 0;
-    } else {
-    x = w; y = target.y;
-    vx = -speed; vy = 0;
-    }
-    console.log('setVelocity:', vx, vy); // <-- Burayı ekle
-    let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
-    rocket.body.setVelocity(vx, vy);
-
-    rocket.targetIdx = targetIdx;
-    this.rockets.add(rocket);
-
-    this.physics.add.overlap(rocket, this.buildings[targetIdx].sprite, () => this.hitBuilding(rocket, targetIdx));
-}
-
-
-  explodeRocket(rocket) {
-    let exp = this.add.sprite(rocket.x, rocket.y, 'explosion').setScale(1.4);
-    exp.play && exp.play('explode');
-    this.time.delayedCall(400, () => exp.destroy());
-    rocket.destroy();
-    showSmoke(this, rocket.x, rocket.y - 20);
-
-    let dove = this.add.sprite(rocket.x, rocket.y, 'dove').setScale(0.25);
-    this.tweens.add({
-      targets: dove, y: dove.y - 90, alpha: 0, duration: 1200, onComplete: () => dove.destroy()
+    // Roket patlat (tıkla)
+    this.input.on('gameobjectdown', (pointer, rocket) => {
+      if (rocket.texture && rocket.texture.key === 'rocket') {
+        rocket.destroy();
+        this.score++;
+        // Skoru ekranda güncellemek için buraya kod ekleyebilirsin
+      }
     });
-
-    this.score += 1;
-    this.scoreText.setText(this.score);
-    sendScoreToBot(this.score);
-  }
-
-  hitBuilding(rocket, idx) {
-    rocket.destroy();
-    let exp = this.add.sprite(rocket.x, rocket.y, 'explosion').setScale(1.5);
-    let smoke = this.add.sprite(rocket.x, rocket.y - 20, 'smoke_anim').setScale(0.7).setAlpha(0.8);
-    this.time.delayedCall(350, () => exp.destroy());
-    this.tweens.add({ targets: smoke, alpha: 0, duration: 1700, onComplete: () => smoke.destroy() });
-
-    let building = this.buildings[idx];
-    building.health -= 1;
-    this.cityHealth -= 1;
-    if (building.health <= 0 && !this.destroyedSprites[idx]) {
-      building.sprite.setFillStyle(0x333333, 0.45);
-      this.destroyedSprites[idx] = this.add.image(building.x, building.y, 'destroyed_building').setScale(0.19);
-      showSmoke(this, building.x, building.y - 50);
-    }
-    if (this.cityHealth <= 0) {
-      this.rocketTimer.remove();
-      this.time.delayedCall(850, () => this.scene.start('GameOverScene', { score: this.score }));
-    }
-  }
-
-  updateHealthBar() {
-    let barW = this.cameras.main.width * 0.58;
-    this.healthBar.width = barW * (this.cityHealth / this.cityMaxHealth);
-    if (this.cityHealth / this.cityMaxHealth < 0.33) this.healthBar.setFillStyle(0xff2323);
-    else if (this.cityHealth / this.cityMaxHealth < 0.6) this.healthBar.setFillStyle(0xffcc29);
-    else this.healthBar.setFillStyle(0x1ff547);
   }
 }
 
