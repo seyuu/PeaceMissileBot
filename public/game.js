@@ -375,8 +375,38 @@ class GameOverScene extends Phaser.Scene {
         this.add.text(this.cameras.main.centerX, 200, "Game Over!", { font: '36px monospace', color: "#fff" }).setOrigin(0.5);
         this.add.text(this.cameras.main.centerX, 250, `Score: ${data.score}`, { font: '28px monospace', color: "#ffd" }).setOrigin(0.5);
 
-        // Skor Firebase'e gönderilecek
-        sendScoreToBot(data.score); 
+         // Skor hesaplamaları:
+    let prevMax = userStats.score || 0;
+    let prevTotal = userStats.total_score || 0;
+    let prevCoins = userStats.total_pmno_coins || 0;
+    let newTotal = prevTotal + data.score;
+
+    // 1. Oyuncu eski rekorunu kırdı mı?
+    let brokePersonalRecord = data.score > prevMax;
+    // 2. Liderlik tablosundaki en yüksek skor (sadece ilk oyuncu varsa)
+    let leaderboardSnap = await fetchLeaderboard();
+    let leaderboardMax = leaderboardSnap[0]?.score || 0;
+    let brokeLeaderboardRecord = data.score > leaderboardMax;
+
+    // Hesaplamalar
+    if (brokePersonalRecord) {
+        userStats.score = data.score;
+        newTotal += data.score * 100;
+    }
+    if (brokeLeaderboardRecord) {
+        newTotal += data.score * 250;
+    }
+
+    userStats.total_score = newTotal;
+    userStats.total_pmno_coins = newTotal * 10;
+
+    // Güncellenmiş skorları Telegram bot.py'ye yolla
+    sendScoreToBot({
+        score: data.score,
+        total_score: userStats.total_score,
+        total_pmno_coins: userStats.total_pmno_coins
+    });
+       
 
         const retryBtn = this.add.text(this.cameras.main.centerX, 340, "Play Again", { font: '24px monospace', color: "#1df", backgroundColor: "#133" })
             .setOrigin(0.5).setPadding(10).setInteractive();
@@ -447,9 +477,11 @@ function sendScoreToBot(currentScore) {
     if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.sendData(
             JSON.stringify({
-                type: 'score_update',
-                user_id: window.Telegram.WebApp.initDataUnsafe.user.id, // Telegramdan gelen user id
-                score: currentScore
+                        type: 'score_update',
+                        user_id: window.Telegram.WebApp.initDataUnsafe.user.id,
+                        score: scoreData.score,
+                        total_score: scoreData.total_score,
+                        total_pmno_coins: scoreData.total_pmno_coins
             })
         );
     }
