@@ -222,6 +222,7 @@ console.log("BUILDING COORDS (should be array):", this.buildingCoords);
   }
 
 spawnRocket() {
+    console.log('spawnRocket çağrıldı')
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
     let targetIdx = Phaser.Math.Between(0, this.buildingCoords.length - 1);
