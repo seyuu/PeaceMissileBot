@@ -240,13 +240,13 @@ spawnRocket() {
 
     let x, y, vx = 0, vy = 0;
     if (entrySide <= 2) {
-      x = target.x; y = -40;
+      x = target.x; y = 0;
       vx = 0; vy = speed;
     } else if (entrySide === 3) {
-      x = -40; y = target.y;
+      x = 0; y = target.y;
       vx = speed; vy = 0;
     } else {
-      x = w + 40; y = target.y;
+      x = w + 0; y = target.y;
       vx = -speed; vy = 0;
     }
                 console.log('Rocket eklendi miiii', x, y);
