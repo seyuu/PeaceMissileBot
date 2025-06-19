@@ -195,7 +195,8 @@ class GameScene extends Phaser.Scene {
     // Her frame health bar güncelle
     this.events.on('update', this.updateHealthBar, this);
   }
- ,spawnRocket() {
+ 
+  spawnRocket() {
   // Hedef bina belirle
   let targetIdx = Phaser.Math.Between(0, buildingCoords.length - 1);
   let target = buildingCoords[targetIdx];
