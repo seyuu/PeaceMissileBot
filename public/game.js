@@ -221,10 +221,7 @@ console.log("BUILDING COORDS (should be array):", this.buildingCoords);
     this.events.on('update', this.updateHealthBar, this);
   }
 
-  spawnRocket() {
-      console.log("buildings", this.buildings); // BURADA ARRAY MI?
-  console.log("buildingCoords", this.buildingCoords); // BURADA ARRAY MI?
-    // Responsive spawn, ekranın dışından gelsin
+spawnRocket() {
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
     let targetIdx = Phaser.Math.Between(0, this.buildingCoords.length - 1);
@@ -233,17 +230,13 @@ console.log("BUILDING COORDS (should be array):", this.buildingCoords);
     let entrySide = Phaser.Math.Between(0, 4);
 
     let x, y, vx = 0, vy = 0;
-
     if (entrySide <= 2) {
-      // Yukarıdan (random x'e gitmek için)
       x = target.x; y = -40;
       vx = 0; vy = speed;
     } else if (entrySide === 3) {
-      // Soldan
       x = -40; y = target.y;
       vx = speed; vy = 0;
     } else {
-      // Sağdan
       x = w + 40; y = target.y;
       vx = -speed; vy = 0;
     }
@@ -254,7 +247,8 @@ console.log("BUILDING COORDS (should be array):", this.buildingCoords);
     this.rockets.add(rocket);
 
     this.physics.add.overlap(rocket, this.buildings[targetIdx].sprite, () => this.hitBuilding(rocket, targetIdx));
-  }
+}
+
 
   explodeRocket(rocket) {
     let exp = this.add.sprite(rocket.x, rocket.y, 'explosion').setScale(1.4);
