@@ -238,20 +238,20 @@ spawnRocket() {
     let speed = Phaser.Math.Between(170, 260);
     let entrySide = Phaser.Math.Between(0, 4);
 
-  let vx = 0, vy = 0;
-if (entrySide <= 2) {
-  x = target.x; y = 0;
-  vx = 0; vy = speed;
-} else if (entrySide === 3) {
-  x = 0; y = target.y;
-  vx = speed; vy = 0;
-} else {
-  x = w; y = target.y;
-  vx = -speed; vy = 0;
-}
-console.log('setVelocity:', vx, vy); // <-- Burayı ekle
-let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
-rocket.body.setVelocity(vx, vy);
+    let vx = 0, vy = 0;
+    if (entrySide <= 2) {
+    x = target.x; y = 0;
+    vx = 0; vy = speed;
+    } else if (entrySide === 3) {
+    x = 0; y = target.y;
+    vx = speed; vy = 0;
+    } else {
+    x = w; y = target.y;
+    vx = -speed; vy = 0;
+    }
+    console.log('setVelocity:', vx, vy); // <-- Burayı ekle
+    let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
+    rocket.body.setVelocity(vx, vy);
 
     rocket.targetIdx = targetIdx;
     this.rockets.add(rocket);
