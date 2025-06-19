@@ -94,7 +94,6 @@ class LobbyScene extends Phaser.Scene {
   constructor() { super('LobbyScene'); }
   async create() {
     const vars = getScaleVars(this);
-           this.scene.start('LobbyScene');
 
     // BG tam ekran
     this.add.image(vars.w/2, vars.h/2, 'lobby_bg').setDisplaySize(vars.w, vars.h);
