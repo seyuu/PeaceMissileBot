@@ -47,12 +47,22 @@ function getScaleVars(scene) {
   };
 }
 
-// -- Oyun içi binalar için koordinatlar (ekrana göre oranla yapabilirsin, burada sabit dursun) --
-const buildingCoords = [
-  { x: 60, y: 500 },   { x: 130, y: 550 }, { x: 210, y: 530 }, { x: 280, y: 560 },
-  { x: 340, y: 510 },  { x: 100, y: 650 }, { x: 180, y: 650 }, { x: 260, y: 630 },
-  { x: 340, y: 670 },  { x: 200, y: 600 }
-];
+function getResponsiveBuildingCoords(w, h) {
+  return [
+    { x: w * 0.13, y: h * 0.65 },   // örnek: eski 60,500 -> %13, %65
+    { x: w * 0.31, y: h * 0.715 },
+    { x: w * 0.5, y: h * 0.69 },
+    { x: w * 0.69, y: h * 0.72 },
+    { x: w * 0.81, y: h * 0.66 },
+    { x: w * 0.24, y: h * 0.83 },
+    { x: w * 0.43, y: h * 0.84 },
+    { x: w * 0.62, y: h * 0.81 },
+    { x: w * 0.81, y: h * 0.87 },
+    { x: w * 0.48, y: h * 0.78 }
+  ];
+}
+
+ 
 const maxBuildingHealth = 3;
 
 // --- Sprite Yüklemeleri ---
@@ -108,10 +118,10 @@ class LobbyScene extends Phaser.Scene {
     this.add.text(panelX, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
 
     // Start Mission butonu: ALTTA, ortada (hiçbir yazı üstüne binmez)
-    let btnY = vars.h * 0.60;
+    let btnY = vars.h * 0.80;
     let startBtn = this.add.image(vars.w/2, btnY, 'button')
       .setScale(vars.btnScale).setInteractive();
-    let btnLabel = this.add.text(vars.w/2, btnY, "", { font: `${vars.fontBig}px monospace`, fill: "#13f7f7" }).setOrigin(0.5);
+    let btnLabel = this.add.text(vars.w/2, btnY, "", { font: `${vars.fontBig}px monospace`, fill: "#13f7f7" }).setOrigin(0.7);
     startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
 
     // Top Players — butonun üstünde, ortada
@@ -177,7 +187,7 @@ class GameScene extends Phaser.Scene {
     this.scoreText = this.add.text(vars.margin + 80, vars.margin, "0", { font: `${vars.fontMid}px monospace`, fill: "#fff" });
 
     // Toplam city health bar (üstte, responsive)
-    this.cityMaxHealth = buildingCoords.length * maxBuildingHealth;
+    this.cityMaxHealth =this.buildingCoords.length * maxBuildingHealth;
     this.cityHealth = this.cityMaxHealth;
     let barW = vars.w * 0.58;
     this.healthBarBg = this.add.rectangle(vars.w/2 - barW/2, vars.margin*2.3, barW, 18, 0x333333).setOrigin(0, 0.5);
@@ -185,7 +195,7 @@ class GameScene extends Phaser.Scene {
 
     // Binaları çiz
     // (İleri: Koordinatları ekrana göre orantılı da yapabilirsin)
-    this.buildings = buildingCoords.map(coord => ({
+    this.buildings = this.buildingCoords.map(coord => ({
       x: coord.x,
       y: coord.y,
       health: maxBuildingHealth,
@@ -214,8 +224,8 @@ class GameScene extends Phaser.Scene {
     // Responsive spawn, ekranın dışından gelsin
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
-    let targetIdx = Phaser.Math.Between(0, buildingCoords.length - 1);
-    let target = buildingCoords[targetIdx];
+    let targetIdx = Phaser.Math.Between(0, this.buildingCoords.length - 1);
+    let target =  this.buildingCoords[targetIdx];
     let speed = Phaser.Math.Between(170, 260);
     let entrySide = Phaser.Math.Between(0, 4);
 
@@ -234,8 +244,8 @@ class GameScene extends Phaser.Scene {
       vx = -speed; vy = 0;
     }
 
-    let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
-    rocket.body.setVelocity(vx, vy);
+let rocket = this.physics.add.sprite(vars.w/2, 0, 'rocket').setScale(0.8).setInteractive();
+rocket.body.setVelocity(0, 200);
     rocket.targetIdx = targetIdx;
     this.rockets.add(rocket);
     this.physics.add.overlap(rocket, this.buildings[targetIdx].sprite, () => this.hitBuilding(rocket, targetIdx));
