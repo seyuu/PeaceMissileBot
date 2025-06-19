@@ -255,7 +255,7 @@ spawnRocket() {
 console.log('Rocket:', rocket, 'Body:', rocket.body);
         console.log('Rocket eklendi', x, y, rocket);
     rocket.body.setVelocity(vx, vy);
-        console.log('setVelocity eklendi', xv, yv, rocket);
+        console.log('setVelocity eklendi', vx, vy, rocket);
     rocket.targetIdx = targetIdx;
     this.rockets.add(rocket);
 
