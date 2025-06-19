@@ -246,7 +246,7 @@ spawnRocket() {
     rocket.body.setVelocity(vx, vy);
     rocket.targetIdx = targetIdx;
     this.rockets.add(rocket);
-
+console.log("Roket eklendi", rocket.x, rocket.y);
     this.physics.add.overlap(rocket, this.buildings[targetIdx].sprite, () => this.hitBuilding(rocket, targetIdx));
 }
 
