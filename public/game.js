@@ -118,7 +118,7 @@ class LobbyScene extends Phaser.Scene {
     this.add.text(panelX, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
 
     // Start Mission butonu: ALTTA, ortada (hiçbir yazı üstüne binmez)
-    let btnY = vars.h * 0.70;
+    let btnY = vars.h * 0.60;
     let startBtn = this.add.image(vars.w/2, btnY, 'button')
       .setScale(vars.btnScale).setInteractive();
     let btnLabel = this.add.text(vars.w, btnY, "", { font: `${vars.fontBig}px monospace`, fill: "#13f7f7" }).setOrigin(0.3);
@@ -143,7 +143,7 @@ class LobbyScene extends Phaser.Scene {
       .setInteractive().on('pointerup', () => this.scene.start('HowToPlayScene'));
 
     // En altta BÜYÜK logo
-    this.add.image(vars.w/2, vars.h - 35, 'logo').setScale(vars.logoScale);
+    this.add.image(vars.w/2, vars.h - 95, 'logo').setScale(vars.logoScale);
   }
 }
 
@@ -205,7 +205,7 @@ class GameScene extends Phaser.Scene {
 
     this.destroyedSprites = [];
     this.rockets = this.physics.add.group();
-
+console.log("BUILDING COORDS (should be array):", this.buildingCoords);
     // Roketleri zamanlayıcı ile başlat
     this.rocketTimer = this.time.addEvent({
       delay: 1100, loop: true, callback: () => this.spawnRocket()
@@ -222,6 +222,8 @@ class GameScene extends Phaser.Scene {
   }
 
   spawnRocket() {
+      console.log("buildings", this.buildings); // BURADA ARRAY MI?
+  console.log("buildingCoords", this.buildingCoords); // BURADA ARRAY MI?
     // Responsive spawn, ekranın dışından gelsin
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
