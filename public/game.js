@@ -207,6 +207,7 @@ class GameScene extends Phaser.Scene {
         this.load.spritesheet('smoke', assets.smoke, { frameWidth: 64, frameHeight: 64 });
     }
     create(data) {
+           this.scene.start('LobbyScene');
         // Arka plan
         let side = data.side || "israel";
         this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, side === "iran" ? "iran_bg" : "israel_bg")
