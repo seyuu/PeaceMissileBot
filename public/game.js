@@ -94,6 +94,7 @@ class LobbyScene extends Phaser.Scene {
   constructor() { super('LobbyScene'); }
   async create() {
     const vars = getScaleVars(this);
+           this.scene.start('LobbyScene');
 
     // BG tam ekran
     this.add.image(vars.w/2, vars.h/2, 'lobby_bg').setDisplaySize(vars.w, vars.h);
@@ -207,7 +208,6 @@ class GameScene extends Phaser.Scene {
         this.load.spritesheet('smoke', assets.smoke, { frameWidth: 64, frameHeight: 64 });
     }
     create(data) {
-           this.scene.start('LobbyScene');
         // Arka plan
         let side = data.side || "israel";
         this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, side === "iran" ? "iran_bg" : "israel_bg")
