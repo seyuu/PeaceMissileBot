@@ -299,4 +299,82 @@ class GameOverScene extends Phaser.Scene {
     this.add.text(vars.w/2, vars.h/2.35, `Score: ${data.score || 0}`, { font: `${vars.fontMid+6}px monospace`, fill: "#23d4fc" }).setOrigin(0.5);
 
     let btn = this.add.text(vars.w/2, vars.h/1.7, "Restart", { font: `${vars.fontMid+3}px monospace`, fill: "#ffda45", backgroundColor: "#23262f" })
-      .
+            .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerup', () => this.scene.start('LobbyScene'));
+
+    // Büyük logo
+    this.add.image(vars.w/2, vars.h - 65, 'logo').setScale(vars.logoScale);
+  }
+}
+
+// --- How to Play ve Leaderboard ekranı ekle ---
+class HowToPlayScene extends Phaser.Scene {
+  constructor() { super('HowToPlayScene'); }
+  create() {
+    const vars = getScaleVars(this);
+    this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.96);
+    this.add.text(vars.w/2, vars.h*0.1, "How To Play", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
+    let msg = "Tap the rockets to turn them into peace doves!\nDon't let them hit the city.\nDefend all buildings as long as you can!\nEach rocket = +1 point.\n\nBreak your record for more coins.";
+    this.add.text(vars.w/2, vars.h*0.17, msg, { font: `${vars.fontSmall+3}px monospace`, fill: "#fff", align: "center" }).setOrigin(0.5,0);
+    this.add.text(vars.w/2, vars.h - 80, "< Back", { font: `${vars.fontMid}px monospace`, fill: "#67f" })
+      .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerup', () => this.scene.start('LobbyScene'));
+  }
+}
+
+class LeaderboardScene extends Phaser.Scene {
+  constructor() { super('LeaderboardScene'); }
+  async create() {
+    const vars = getScaleVars(this);
+    this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.93);
+    this.add.text(vars.w/2, vars.h*0.11, "Leaderboard", { font: `${vars.fontBig}px monospace`, fill: "#ffe349" }).setOrigin(0.5,0);
+
+    const leaders = await fetchLeaderboard();
+    let y = vars.h*0.17;
+    leaders.forEach((u, i) => {
+      this.add.text(vars.w/2, y + i * (vars.fontSmall+16), `${i + 1}. ${u.username || "Anon"} - ${u.total_score} pts`, { font: `${vars.fontSmall+4}px monospace`, fill: "#fff" }).setOrigin(0.5,0);
+    });
+
+    this.add.text(vars.w/2, vars.h - 80, "< Back", { font: `${vars.fontMid}px monospace`, fill: "#67f" })
+      .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerup', () => this.scene.start('LobbyScene'));
+  }
+}
+
+// --- Skor Telegram Bot'a gönderimi ---
+function sendScoreToBot(currentScore) {
+  if (window.Telegram && window.Telegram.WebApp) {
+    window.Telegram.WebApp.sendData(
+      JSON.stringify({
+        type: 'score_update',
+        user_id: window.Telegram.WebApp.initDataUnsafe.user.id,
+        score: currentScore
+      })
+    );
+  }
+}
+
+function showSmoke(scene, x, y) {
+   let smoke = scene.add.sprite(x, y, 'smoke_anim').setScale(1.1).setAlpha(0.85);
+    smoke.play('smoke_play');
+    smoke.on('animationcomplete', () => smoke.destroy());
+}
+
+// --- Phaser Başlat ---
+const gameWidth = window.innerWidth;
+const gameHeight = window.innerHeight;
+
+const config = {
+  type: Phaser.AUTO,
+  parent: 'phaser-game',
+  width: gameWidth,
+  height: gameHeight,
+  backgroundColor: "#000",
+  scene: [BootScene, LobbyScene, SideSelectScene, GameScene, GameOverScene, HowToPlayScene, LeaderboardScene],
+  physics: { default: "arcade", arcade: { gravity: { y: 0 } } },
+  scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH }
+};
+const game = new Phaser.Game(config);
