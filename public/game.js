@@ -72,40 +72,41 @@ class BootScene extends Phaser.Scene {
 }
 
 // --- Lobby (Ana Menü, Kullanıcı Bilgileri, 3 Buton, Logo) ---
- class LobbyScene extends Phaser.Scene {
+class LobbyScene extends Phaser.Scene {
   constructor() { super('LobbyScene'); }
   async create() {
-    // Responsive ölçüler
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
 
-    // Background tamamen doldurur
+    // BG tam ekran
     this.add.image(w/2, h/2, 'bg_lobby').setDisplaySize(w, h);
 
     await fetchUserStats();
 
-    // Sağ üst köşe: Welcome paneli
+    // Sağ üst köşe: Welcome paneli, PEACE'i KAPATMAZ!
+    let panelW = Math.min(w, 380);
+    let panelX = w - panelW - 10; // 10px margin
+    let y = 20;
     let statColor = "#ffe349";
-    let panelX = w - 175;  // sağa yaslanmış
-    let y = 30;
+    let panelFontSize = Math.max(Math.round(w/25), 14);
 
-    // Üst bilgi paneli (asla peace yazısını kapatmaz)
-    let welcomeText = this.add.text(panelX, y, `Welcome, ${userStats.username || 'Player'}!`, { font: "19px monospace", fill: "#fff" });
-    y += 24;
-    this.add.text(panelX, y, `Max Score: ${userStats.score}`, { font: "16px monospace", fill: statColor });
-    y += 20;
-    this.add.text(panelX, y, `Total Score: ${userStats.total_score}`, { font: "16px monospace", fill: statColor });
-    y += 20;
-    this.add.text(panelX, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: "16px monospace", fill: statColor });
+    this.add.text(panelX, y, `Welcome, ${userStats.username || 'Player'}!`, { font: `${panelFontSize}px monospace`, fill: "#fff" });
+    y += panelFontSize + 2;
+    this.add.text(panelX, y, `Max Score: ${userStats.score}`, { font: `${panelFontSize-2}px monospace`, fill: statColor });
+    y += panelFontSize;
+    this.add.text(panelX, y, `Total Score: ${userStats.total_score}`, { font: `${panelFontSize-2}px monospace`, fill: statColor });
+    y += panelFontSize;
+    this.add.text(panelX, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: `${panelFontSize-2}px monospace`, fill: statColor });
 
-    // Start Mission butonu: dikey ortada
-    let btnY = h * 0.36;
-    let startBtn = this.add.image(w/2, btnY, 'button').setScale(w/1100 + 0.34).setInteractive();
-    let btnLabel = this.add.text(w/2, btnY-11, "START MISSION", { font: "24px monospace", fill: "#13f7f7" }).setOrigin(0.5);
+    // Start Mission butonu: ALTTA, ortada
+    let btnY = h * 0.58;
+    let startBtn = this.add.image(w/2, btnY, 'button')
+      .setScale(Math.max(w/1400, 0.32)).setInteractive();
+    let btnLabel = this.add.text(w/2, btnY - 13, "START MISSION", { font: `${Math.max(w/22, 22)}px monospace`, fill: "#13f7f7" }).setOrigin(0.5);
     startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
 
-    // Top Players butonun altında, max 5 kişi
-    let lbY = btnY + 65;
+    // Top Players — butonun üstünde
+    let lbY = btnY - 70;
     this.add.text(w/2, lbY, "Top Players", { font: "bold 19px monospace", fill: "#ffe349" }).setOrigin(0.5, 0);
     const leaders = (await fetchLeaderboard()).slice(0, 5);
     lbY += 28;
@@ -114,15 +115,15 @@ class BootScene extends Phaser.Scene {
     });
 
     // Menü: Leaderboard & How to Play
-    let menuY = lbY + leaders.length * 22 + 24;
-    this.add.text(w/6, menuY, "Leaderboard", { font: "19px monospace", fill: "#ffe349" })
+    let menuY = btnY + startBtn.displayHeight/2 + 25;
+    this.add.text(w/3.5, menuY, "Leaderboard", { font: "19px monospace", fill: "#ffe349" })
       .setInteractive().on('pointerup', () => this.scene.start('LeaderboardScene'));
-    this.add.text(w-w/6, menuY, "How to Play?", { font: "19px monospace", fill: "#43c0f7" })
+    this.add.text(w - w/3.5, menuY, "How to Play?", { font: "19px monospace", fill: "#43c0f7" })
       .setOrigin(1, 0)
       .setInteractive().on('pointerup', () => this.scene.start('HowToPlayScene'));
 
     // En altta BÜYÜK logo
-    this.add.image(w/2, h-50, 'logo').setScale(Math.max(w/1400, 0.18));
+    this.add.image(w/2, h-60, 'logo').setScale(Math.max(w/900, 0.32));
   }
 }
 
@@ -201,25 +202,26 @@ class GameScene extends Phaser.Scene {
     this.events.on('update', this.updateHealthBar, this);
   }
  
- spawnRocket() {
+spawnRocket() {
   let targetIdx = Phaser.Math.Between(0, buildingCoords.length - 1);
   let target = buildingCoords[targetIdx];
   let speed = Phaser.Math.Between(170, 260);
-
   let entrySide = Phaser.Math.Between(0, 4);
+
   let x, y, vx = 0, vy = 0;
 
   if (entrySide <= 2) {
+    // Yukarıdan
     x = target.x;
-    y = -40; // yukarıdan SAHNE DIŞI, aşağı iner
+    y = -40;
     vx = 0; vy = speed;
   } else if (entrySide === 3) {
-    x = -40; // soldan SAHNE DIŞI, sağa gider
-    y = target.y;
+    // Soldan: ekrandan -40px sol, hedef binaya çapraz
+    x = -40; y = target.y;
     vx = speed; vy = 0;
   } else {
-    x = 460; // sağdan SAHNE DIŞI, sola gider
-    y = target.y;
+    // Sağdan: ekrandan +40px sağ, hedef binaya çapraz
+    x = this.cameras.main.width + 40; y = target.y;
     vx = -speed; vy = 0;
   }
 
@@ -229,8 +231,6 @@ class GameScene extends Phaser.Scene {
   this.rockets.add(rocket);
   this.physics.add.overlap(rocket, this.buildings[targetIdx].sprite, () => this.hitBuilding(rocket, targetIdx));
 }
-
-
 
   explodeRocket(rocket) {
     // Patlama
@@ -353,14 +353,18 @@ function showSmoke(scene, x, y) {
 
 
 // --- Phaser Başlat ---
+const gameWidth = window.innerWidth;
+const gameHeight = window.innerHeight;
+
 const config = {
   type: Phaser.AUTO,
   parent: 'phaser-game',
-  width: 420,
-  height: 770,
+  width: gameWidth,
+  height: gameHeight,
   backgroundColor: "#000",
   scene: [BootScene, LobbyScene, SideSelectScene, GameScene, GameOverScene, HowToPlayScene, LeaderboardScene],
   physics: { default: "arcade", arcade: { gravity: { y: 0 } } },
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
+  scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH }
 };
 const game = new Phaser.Game(config);
+
