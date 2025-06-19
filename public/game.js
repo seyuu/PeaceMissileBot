@@ -384,7 +384,7 @@ class GameOverScene extends Phaser.Scene {
     // 1. Oyuncu eski rekorunu kırdı mı?
     let brokePersonalRecord = data.score > prevMax;
     // 2. Liderlik tablosundaki en yüksek skor (sadece ilk oyuncu varsa)
-    let leaderboardSnap = await fetchLeaderboard();
+    let leaderboardSnap = fetchLeaderboard();
     let leaderboardMax = leaderboardSnap[0]?.score || 0;
     let brokeLeaderboardRecord = data.score > leaderboardMax;
 
