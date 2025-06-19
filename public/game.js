@@ -370,7 +370,7 @@ class GameScene extends Phaser.Scene {
 // --- GameOver Scene ---
 class GameOverScene extends Phaser.Scene {
     constructor() { super({ key: 'GameOverScene' }); }
-    create(data) {
+    async create(data) {
         this.cameras.main.setBackgroundColor("#222");
         this.add.text(this.cameras.main.centerX, 200, "Game Over!", { font: '36px monospace', color: "#fff" }).setOrigin(0.5);
         this.add.text(this.cameras.main.centerX, 250, `Score: ${data.score}`, { font: '28px monospace', color: "#ffd" }).setOrigin(0.5);
@@ -384,7 +384,7 @@ class GameOverScene extends Phaser.Scene {
     // 1. Oyuncu eski rekorunu kırdı mı?
     let brokePersonalRecord = data.score > prevMax;
     // 2. Liderlik tablosundaki en yüksek skor (sadece ilk oyuncu varsa)
-    let leaderboardSnap = fetchLeaderboard();
+    let leaderboardSnap = await fetchLeaderboard();
     let leaderboardMax = leaderboardSnap[0]?.score || 0;
     let brokeLeaderboardRecord = data.score > leaderboardMax;
 
