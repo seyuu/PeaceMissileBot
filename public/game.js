@@ -1,16 +1,37 @@
-let tg, currentUser, db;
+// --- Telegram & Firestore Setup (skor yazımı sadece bot.py ile olacak, burada sadece gösterim var) ---
+let tg = window.Telegram && window.Telegram.WebApp;
+let currentUser = tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
 
 // --- Oyun Konfigürasyonu ---
 const firebaseConfig = {
   apiKey: "AIzaSyBtOkm8dpjVXlzAXCEB5sL_Awqq4HEeemc",
   authDomain: "peacemissile-game.firebaseapp.com",
   projectId: "peacemissile-game",
-  storageBucket: "peacemissile-game.firebasestorage.app",
+  storageBucket: "peacemissile-game.appspot.com",
   messagingSenderId: "641906716058",
   appId: "1:641906716058:web:1376e93994fab29f049e23"
 };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let userStats = { username: "Player", score: 0, total_score: 0, total_pmno_coins: 0 };
 // -- Firebase Config (web için sadece okuma yapılacak!)
 // Firebase'i skor tablosu için sadece KULLANICIYA SKOR GÖSTERMEK için yüklemek istiyorsan, kendi config ile ekle! Yazma işini bot.py yapacak, webden yazma YOK! (Yorum satırı bıraktım!)
+async function fetchUserStats() {
+  if (!currentUser) return;
+  const ref = db.collection("users").doc(String(currentUser.id));
+  const snap = await ref.get();
+  if (snap.exists) {
+    userStats = snap.data();
+  }
+}
+
+
+// --- Leaderboard Getir ---
+async function fetchLeaderboard() {
+  const snap = await db.collection("users").orderBy("total_score", "desc").limit(5).get();
+  return snap.docs.map(doc => doc.data());
+}
 
 // --- Oyun Ayarları ---
 const buildingData = {
@@ -119,7 +140,22 @@ class LobbyScene extends Phaser.Scene {
   }
 }
 
-
+// --- Responsive Boyutlar ve Helper ---
+function getScaleVars(scene) {
+  // Boyutları ekrana oranla al, minimum ve maksimum koy
+  const w = scene.cameras.main.width;
+  const h = scene.cameras.main.height;
+  return {
+    w, h,
+    fontBig: Math.max(Math.round(w/20), 18),
+    fontMid: Math.max(Math.round(w/25), 15),
+    fontSmall: Math.max(Math.round(w/32), 12),
+    btnScale: Math.max(w/1400, 0.33),
+    logoScale: Math.max(w/700, 0.21),
+    topPanelW: Math.min(w * 0.55, 330),
+    margin: Math.max(w/48, 10)
+  };
+}
 
 // --- Taraf Seçim ---
 class SideSelectScene extends Phaser.Scene {
@@ -157,6 +193,10 @@ class GameScene extends Phaser.Scene {
         this.load.image('coin', assets.coin);
         this.load.image('score_icon', assets.score_icon);
         this.load.spritesheet('explosion', assets.explosion, { frameWidth: 64, frameHeight: 64 });
+    this.load.image('coin_icon', 'assets/coin_icon.png');
+    this.load.image('building_bar', 'assets/score.png');
+    this.load.spritesheet('smoke_anim', 'assets/smoke_sheet.png', { frameWidth: 64, frameHeight: 64 });
+   
         // ...duman efekti için gerekirse ayrı ekle
     }
     create(data) {
