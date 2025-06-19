@@ -206,7 +206,8 @@ class GameScene extends Phaser.Scene {
         this.load.image('building_bar', assets.building_bar);
         this.load.spritesheet('smoke', assets.smoke, { frameWidth: 64, frameHeight: 64 });
     }
-    create(data) {
+    create(data) { 
+        this.scene.start('LobbyScene');
         // Arka plan
         let side = data.side || "israel";
         this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, side === "iran" ? "iran_bg" : "israel_bg")
@@ -280,7 +281,7 @@ class GameScene extends Phaser.Scene {
         bomb.vx = vx / 1000;
         bomb.vy = vy / 1000;
         this.bombs.push(bomb);
-
+        bomb.rotation = Math.atan2(bomb.vy, bomb.vx) + Math.PI/2;bomb.rotation = Math.atan2(bomb.vy, bomb.vx) + Math.PI/2;
         // Bombaya tıklandığında
         bomb.on('pointerdown', () => {
             this.bombExplode(bomb, false);
@@ -338,9 +339,10 @@ class GameScene extends Phaser.Scene {
                 if (b.health <= 0) {
                     b.alive = false;
                     // Bina yok olduysa: destroyed_building ve duman efekti
-                    let des = this.add.image(b.x, b.y + 15, 'destroyed_building').setDisplaySize(55, 65);
+                    let des = this.add.image(b.x, b.y + 15, 'destroyed_building').setDisplaySize(90, 100);
                     let smoke = this.add.sprite(b.x, b.y - 10, 'smoke').setScale(0.7);
                     this.time.delayedCall(900, () => smoke.destroy());
+                    showSmoke(this, b.x, b.y - 20);
                 }
                 // Game over kontrol
                 if (this.buildings.filter(bb => bb.alive).length === 0) {
@@ -382,12 +384,56 @@ class GameOverScene extends Phaser.Scene {
     }
 }
 
+// --- How to Play ve Leaderboard ekranı ekle ---
+class HowToPlayScene extends Phaser.Scene {
+  constructor() { super('HowToPlayScene'); }
+  create() {
+    const vars = getScaleVars(this);
+    this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.96);
+    this.add.text(vars.w/2, vars.h*0.1, "How To Play", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
+    let msg = "Tap the rockets to turn them into peace doves!\nDon't let them hit the city.\nDefend all buildings as long as you can!\nEach rocket = +1 point.\n\nBreak your record for more coins.";
+    this.add.text(vars.w/2, vars.h*0.17, msg, { font: `${vars.fontSmall+3}px monospace`, fill: "#fff", align: "center" }).setOrigin(0.5,0);
+    this.add.text(vars.w/2, vars.h - 80, "< Back", { font: `${vars.fontMid}px monospace`, fill: "#67f" })
+      .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerup', () => this.scene.start('LobbyScene'));
+  }
+}
+
+class LeaderboardScene extends Phaser.Scene {
+  constructor() { super('LeaderboardScene'); }
+  async create() {
+    const vars = getScaleVars(this);
+    this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.93);
+    this.add.text(vars.w/2, vars.h*0.11, "Leaderboard", { font: `${vars.fontBig}px monospace`, fill: "#ffe349" }).setOrigin(0.5,0);
+
+    const leaders = await fetchLeaderboard();
+    let y = vars.h*0.17;
+    leaders.forEach((u, i) => {
+      this.add.text(vars.w/2, y + i * (vars.fontSmall+16), `${i + 1}. ${u.username || "Anon"} - ${u.total_score} pts`, { font: `${vars.fontSmall+4}px monospace`, fill: "#fff" }).setOrigin(0.5,0);
+    });
+
+    this.add.text(vars.w/2, vars.h - 80, "< Back", { font: `${vars.fontMid}px monospace`, fill: "#67f" })
+      .setOrigin(0.5)
+      .setInteractive()
+      .on('pointerup', () => this.scene.start('LobbyScene'));
+  }
+}
+
+function showSmoke(scene, x, y) {
+   let smoke = scene.add.sprite(x, y, 'smoke_anim').setScale(1.1).setAlpha(0.85);
+    smoke.play('smoke_play');
+    smoke.on('animationcomplete', () => smoke.destroy());
+}
+
 // --- Phaser Başlat ---
+const gameWidth = window.innerWidth;
+const gameHeight = window.innerHeight;
 const config = {
     type: Phaser.AUTO,
     parent: 'phaser-game',
-    width: 420,
-    height: 770,
+    width: gameWidth,
+    height: gameHeight,
     backgroundColor: "#000",
     scene: [LobbyScene, SideSelectScene, GameScene, GameOverScene],
     physics: { default: "arcade", arcade: { gravity: { y: 0 } } },
