@@ -1,249 +1,197 @@
-// game.js (düzenlenmiş)
+let tg, currentUser, db, game;
+let selectedSide = null;
+let currentHighScore = 0;
+let leaderboardTopScore = 0;
 
-// Önceki sahneleri kaldırmadan önce yeni sahneleri ekliyoruz
-class SideSelectionScene extends Phaser.Scene {
-    constructor() {
-        super({ key: 'SideSelectionScene' });
+const firebaseConfig = { /* ... senin configin ... */ };
+
+// ------ Preloader Scene ------
+class Preloader extends Phaser.Scene {
+    constructor() { super('Preloader'); }
+    preload() {
+        this.load.image('lobby_bg', 'https://raw.githubusercontent.com/seyuu/PeaceMissileBot/main/public/assets/lobby_bg.png');
+        this.load.image('play_button', 'https://raw.githubusercontent.com/seyuu/PeaceMissileBot/main/public/assets/play_button.png');
+        this.load.image('score_icon', 'https://raw.githubusercontent.com/seyuu/PeaceMissileBot/main/public/assets/score_icon.png');
+        this.load.image('coin_icon', 'https://raw.githubusercontent.com/seyuu/PeaceMissileBot/main/public/assets/coin_icon.png');
+        this.load.image('rocket', 'https://raw.githubusercontent.com/seyuu/PeaceMissileBot/main/public/assets/rocket.png');
+        this.load.image('explosion', 'https://raw.githubusercontent.com/seyuu/PeaceMissileBot/main/public/assets/explosion.gif');
+        this.load.image('dove', 'https://raw.githubusercontent.com/seyuu/PeaceMissileBot/main/public/assets/dove.png');
+        this.load.image('destroyed_building', 'https://raw.githubusercontent.com/seyuu/PeaceMissileBot/main/public/assets/destroyed_building.png');
+        this.load.image('iran_bg', 'https://raw.githubusercontent.com/seyuu/PeaceMissileBot/main/public/assets/iran_bg.jpg');
+        this.load.image('israel_bg', 'https://raw.githubusercontent.com/seyuu/PeaceMissileBot/main/public/assets/israel_bg.jpg');
+        // asset eklemesi gerekirse buraya
     }
-
     create() {
-        const gameWidth = this.cameras.main.width;
-        const gameHeight = this.cameras.main.height;
-
-        this.add.text(gameWidth / 2, gameHeight * 0.1, 'Choose Your Side', {
-            fontSize: `${Math.max(32, gameWidth * 0.05)}px`,
-            fill: '#fff',
-            stroke: '#000',
-            strokeThickness: 6
-        }).setOrigin(0.5);
-
-        const israelBtn = this.add.text(gameWidth / 2, gameHeight * 0.4, '🇮🇱 ISRAEL', {
-            fontSize: `${Math.max(28, gameWidth * 0.04)}px`,
-            fill: '#ffffff',
-            backgroundColor: '#1f1f1f',
-            padding: { x: 20, y: 10 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        const iranBtn = this.add.text(gameWidth / 2, gameHeight * 0.6, '🇮🇷 IRAN', {
-            fontSize: `${Math.max(28, gameWidth * 0.04)}px`,
-            fill: '#ffffff',
-            backgroundColor: '#1f1f1f',
-            padding: { x: 20, y: 10 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        israelBtn.on('pointerdown', () => this.startLobby('israel'));
-        iranBtn.on('pointerdown', () => this.startLobby('iran'));
-    }
-
-    startLobby(side) {
-        this.scene.start('LobbyScene', { side });
-    }
-}
-
-// LobbyScene sahnesini güncelliyoruz
-class LobbyScene extends Phaser.Scene {
-    constructor() {
-        super({ key: 'LobbyScene' });
-    }
-
-    init() {
-        // Side seçimini URL’den al
-        const urlParams = new URLSearchParams(window.location.search);
-        this.selectedSide = urlParams.get('side') || 'israel'; // default israel
-    }
-
-    preload() {}
-
-    create() {
-        const gameWidth = this.cameras.main.width;
-        const gameHeight = this.cameras.main.height;
-
-        // Takım arka planı
-        const bgKey = this.selectedSide === 'iran' ? 'iran_bg' : 'israel_bg';
-        this.add.image(gameWidth / 2, gameHeight / 2, bgKey).setDisplaySize(gameWidth, gameHeight);
-
-        // Hoş geldin metni
-        const welcomeFontSize = Math.max(26, Math.floor(gameWidth * 0.045));
-        this.add.text(gameWidth / 2, gameHeight * 0.11, 
-            `Welcome, ${currentUser ? currentUser.first_name : 'Ambassador'}!`, 
-            { fontSize: `${welcomeFontSize}px`, fill: '#fff', stroke: '#000', strokeThickness: 6, fontStyle: "bold" }
-        ).setOrigin(0.5);
-
-        // Skor kutuları
-        const infoY = gameHeight * 0.2;
-        const boxW = Math.floor(gameWidth * 0.8);
-        const boxH = Math.floor(gameHeight * 0.22);
-
-        // Ana kutu
-        const statBox = this.add.graphics();
-        statBox.fillStyle(0x000000, 0.6);
-        statBox.fillRoundedRect((gameWidth - boxW) / 2, infoY, boxW, boxH, 32);
-
-        // Max Score, Total Score, Coin
-        const iconSize = Math.floor(boxH * 0.32);
-        const textSize = Math.floor(boxH * 0.19);
-
-        // İkonlar
-        this.add.image(gameWidth * 0.25, infoY + boxH * 0.33, 'score_icon').setDisplaySize(iconSize, iconSize);
-        this.add.image(gameWidth * 0.25, infoY + boxH * 0.68, 'coin_icon').setDisplaySize(iconSize, iconSize);
-        
-        // Metinler (dinamik, önce Loading)
-        this.maxScoreText = this.add.text(gameWidth * 0.35, infoY + boxH * 0.33, 'Max Score: Loading...', 
-            { fontSize: `${textSize}px`, fill: '#fff' }).setOrigin(0, 0.5);
-        this.totalScoreText = this.add.text(gameWidth * 0.35, infoY + boxH * 0.52, 'Total Score: Loading...', 
-            { fontSize: `${textSize}px`, fill: '#fff' }).setOrigin(0, 0.5);
-        this.coinText = this.add.text(gameWidth * 0.35, infoY + boxH * 0.68, 'Coins: Loading...', 
-            { fontSize: `${textSize}px`, fill: '#fff' }).setOrigin(0, 0.5);
-
-        // Firebase’den verileri çek
-        if (currentUser && db) {
-            const userDocRef = db.collection('users').doc(String(currentUser.id));
-            userDocRef.get().then(doc => {
-                if (doc.exists) {
-                    const data = doc.data();
-                    this.maxScoreText.setText(`Max Score: ${data.score || 0}`);
-                    this.totalScoreText.setText(`Total Score: ${data.total_score || 0}`);
-                    this.coinText.setText(`Coins: ${data.total_pmno_coins || 0}`);
-                } else {
-                    this.maxScoreText.setText(`Max Score: 0`);
-                    this.totalScoreText.setText(`Total Score: 0`);
-                    this.coinText.setText(`Coins: 0`);
-                }
-            }).catch(err => {
-                this.maxScoreText.setText('Max Score: -');
-                this.totalScoreText.setText('Total Score: -');
-                this.coinText.setText('Coins: -');
-            });
+        if (window.Telegram && window.Telegram.WebApp) {
+            tg = window.Telegram.WebApp;
+            currentUser = tg.initDataUnsafe.user;
+            tg.ready(); tg.expand();
         } else {
-            this.maxScoreText.setText('Max Score: N/A');
-            this.totalScoreText.setText('Total Score: N/A');
-            this.coinText.setText('Coins: N/A');
+            currentUser = { id: 'test_user', first_name: 'Guest', username: 'guest' };
         }
-
-        // Start Game butonu
-        const btnW = gameWidth * 0.65;
-        const btnH = Math.max(60, gameHeight * 0.08);
-        const startY = infoY + boxH + gameHeight * 0.08;
-        const startBtn = this.add.rectangle(gameWidth / 2, startY, btnW, btnH, 0x1976d2, 1)
-            .setStrokeStyle(4, 0xffffff)
-            .setInteractive({ useHandCursor: true });
-
-        this.add.text(gameWidth / 2, startY, "START GAME", {
-            fontSize: `${Math.floor(btnH * 0.48)}px`,
-            fill: "#fff",
-            fontStyle: "bold"
-        }).setOrigin(0.5);
-
-        startBtn.on('pointerdown', () => {
-            this.scene.start('GameScene'); // Oyun sahnesine geç
-        });
-
-        // Menü butonları (Leaderboard ve Info)
-        const menuBtnW = btnW * 0.44;
-        const menuBtnH = btnH * 0.82;
-        const menuY = startY + btnH * 1.25;
-        // Leaderboard
-        const leaderboardBtn = this.add.rectangle(
-            gameWidth / 2 - menuBtnW * 0.56, menuY, menuBtnW, menuBtnH, 0x333333, 1
-        ).setStrokeStyle(2, 0xffffff).setInteractive({ useHandCursor: true });
-        this.add.text(
-            gameWidth / 2 - menuBtnW * 0.56, menuY, "Leaderboard", { fontSize: `${Math.floor(menuBtnH * 0.48)}px`, fill: "#fff" }
-        ).setOrigin(0.5);
-
-        // Game Info
-        const infoBtn = this.add.rectangle(
-            gameWidth / 2 + menuBtnW * 0.56, menuY, menuBtnW, menuBtnH, 0x333333, 1
-        ).setStrokeStyle(2, 0xffffff).setInteractive({ useHandCursor: true });
-        this.add.text(
-            gameWidth / 2 + menuBtnW * 0.56, menuY, "Game Info", { fontSize: `${Math.floor(menuBtnH * 0.48)}px`, fill: "#fff" }
-        ).setOrigin(0.5);
-
-        // Buton işlevleri (modal gösterim)
-        leaderboardBtn.on('pointerdown', () => this.showLeaderboardModal());
-        infoBtn.on('pointerdown', () => this.showGameInfoModal());
-    }
-
-    // Modal fonksiyonları
-    showLeaderboardModal() {
-        // Modal: Dış kısmı ve kutu
-        const w = this.cameras.main.width;
-        const h = this.cameras.main.height;
-        const modalBg = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.85).setDepth(20);
-        const modalBox = this.add.rectangle(w / 2, h / 2, w * 0.8, h * 0.6, 0x222222, 1).setStrokeStyle(4, 0xffffff).setDepth(21);
-
-        const loadingText = this.add.text(w / 2, h / 2, "Loading Leaderboard...", { fontSize: "28px", fill: "#fff" })
-            .setOrigin(0.5).setDepth(22);
-
-        // Firebase’den leaderboard çek
-        if (db) {
-            db.collection('users')
-                .orderBy('total_score', 'desc').limit(10).get()
-                .then(snapshot => {
-                    loadingText.setText(""); // Temizle
-                    let y = h / 2 - (h * 0.23);
-                    snapshot.forEach((doc, i) => {
-                        const d = doc.data();
-                        this.add.text(w / 2 - 80, y, `${i + 1}.`, { fontSize: "23px", fill: "#FFD700" }).setOrigin(1, 0.5).setDepth(22);
-                        this.add.text(w / 2 - 70, y, d.username || d.first_name || "-", { fontSize: "23px", fill: "#fff" }).setOrigin(0, 0.5).setDepth(22);
-                        this.add.text(w / 2 + 80, y, `${d.total_score || 0} ☮️`, { fontSize: "23px", fill: "#fff" }).setOrigin(1, 0.5).setDepth(22);
-                        y += 35;
-                    });
-                    if (snapshot.empty) {
-                        loadingText.setText("No players yet!").setDepth(22);
-                    }
-                });
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+        } else {
+            db = firebase.firestore();
         }
-
-        // Kapatma butonu
-        const closeBtn = this.add.text(w / 2, h / 2 + (h * 0.29), "Close", { fontSize: "30px", fill: "#fff", backgroundColor: "#d32f2f" })
-            .setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true });
-        closeBtn.on('pointerdown', () => {
-            modalBg.destroy();
-            modalBox.destroy();
-            loadingText.destroy();
-            closeBtn.destroy();
-            // Tüm leaderboard satırlarını sil (en temiz yol: sahneyi yeniden başlatmak)
-            this.scene.restart();
-        });
-    }
-
-    showGameInfoModal() {
-        const w = this.cameras.main.width;
-        const h = this.cameras.main.height;
-        const modalBg = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.85).setDepth(20);
-        const modalBox = this.add.rectangle(w / 2, h / 2, w * 0.8, h * 0.6, 0x222222, 1).setStrokeStyle(4, 0xffffff).setDepth(21);
-        const infoText = this.add.text(
-            w / 2, h / 2 - 90, 
-            "Game Objective:\nTurn rockets into doves!\n\nEvery rocket stopped is 10 points.\nFinish with new highscore = BIG coin bonus!\nCheck the leaderboard and your coins!\n\nGame made for peace, not war.",
-            { fontSize: "24px", fill: "#fff", align: "center", wordWrap: { width: w * 0.75 } }
-        ).setOrigin(0.5).setDepth(22);
-
-        const closeBtn = this.add.text(w / 2, h / 2 + (h * 0.21), "Close", { fontSize: "30px", fill: "#fff", backgroundColor: "#d32f2f" })
-            .setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true });
-        closeBtn.on('pointerdown', () => {
-            modalBg.destroy();
-            modalBox.destroy();
-            infoText.destroy();
-            closeBtn.destroy();
-        });
+        this.scene.start('SideSelectionScene');
     }
 }
 
+// ------ Taraf Seçimi ------
+class SideSelectionScene extends Phaser.Scene {
+    constructor() { super('SideSelectionScene'); }
+    create() {
+        const w = this.cameras.main.width, h = this.cameras.main.height;
+        this.add.text(w/2, h*0.18, 'Choose your side', { fontSize: '30px', fill: '#fff', stroke:'#000', strokeThickness:5 }).setOrigin(0.5);
+        const btnW = w*0.32, btnH = h*0.38;
+        // İsrail
+        const israelBtn = this.add.image(w*0.35, btnH, 'israel_bg').setDisplaySize(180,120).setInteractive();
+        this.add.text(w*0.35, btnH+80, 'Defend Israel', { fontSize: '18px', fill:'#fff', stroke:'#000', strokeThickness:4 }).setOrigin(0.5);
+        // İran
+        const iranBtn = this.add.image(w*0.65, btnH, 'iran_bg').setDisplaySize(180,120).setInteractive();
+        this.add.text(w*0.65, btnH+80, 'Defend Iran', { fontSize: '18px', fill:'#fff', stroke:'#000', strokeThickness:4 }).setOrigin(0.5);
 
-// GameScene zaten var, içine "init(data)" eklenmeli:
-// init(data) {
-//   this.selectedSide = data.side;
-// }
-
-// config sahnesine yeni sahne ekle:
-const config = {
-    type: Phaser.AUTO,
-    width: window.innerWidth,
-    height: window.innerHeight,
-    physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
-    scene: [SideSelectionScene, Preloader, LobbyScene, GameScene],
-    scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
+        israelBtn.on('pointerdown', ()=>{ selectedSide='israel'; this.scene.start('LobbyScene'); });
+        iranBtn.on('pointerdown', ()=>{ selectedSide='iran'; this.scene.start('LobbyScene'); });
     }
+}
+
+// ------ Lobi (Oyun Öncesi) ------
+class LobbyScene extends Phaser.Scene {
+    constructor() { super('LobbyScene'); }
+    create() {
+        const w = this.cameras.main.width, h = this.cameras.main.height;
+        this.add.image(w/2, h/2, selectedSide+'_bg').setDisplaySize(w, h);
+
+        this.add.text(w/2, h*0.12, `Welcome, ${currentUser.first_name}!`, { fontSize:'28px', fill:'#fff', stroke:'#000', strokeThickness:4 }).setOrigin(0.5);
+        this.add.text(w/2, h*0.18, `Side: ${selectedSide.toUpperCase()}`, { fontSize:'22px', fill:'#fff', stroke:'#000', strokeThickness:3 }).setOrigin(0.5);
+
+        let highScoreText = this.add.text(w*0.3, h*0.3, 'Loading...', { fontSize:'20px', fill:'#fff' }).setOrigin(0,0.5);
+        let totalScoreText = this.add.text(w*0.3, h*0.38, '', { fontSize:'20px', fill:'#fff' }).setOrigin(0,0.5);
+        let coinsText = this.add.text(w*0.3, h*0.46, '', { fontSize:'20px', fill:'#fff' }).setOrigin(0,0.5);
+
+        if (db && currentUser) {
+            db.collection('users').doc(String(currentUser.id)).get().then(doc=>{
+                let d = doc.exists ? doc.data() : { score:0, total_score:0, total_pmno_coins:0 };
+                currentHighScore = d.score || 0;
+                highScoreText.setText(`Max Score: ${d.score||0}`);
+                totalScoreText.setText(`Total Score: ${d.total_score||0}`);
+                coinsText.setText(`Coins: ${d.total_pmno_coins||0}`);
+            });
+            db.collection('users').orderBy('score','desc').limit(1).get().then(q=>{
+                q.forEach(doc=>{ leaderboardTopScore=doc.data().score||0; });
+            });
+        }
+
+        const playBtn = this.add.image(w/2, h*0.80, 'play_button').setDisplaySize(220, 80).setInteractive();
+        playBtn.on('pointerdown', ()=> this.scene.start('GameScene'));
+
+        // Menüde diğer bölümler
+        this.add.text(w/2, h*0.91, 'Leaderboard | Game Info', { fontSize:'16px', fill:'#fff', backgroundColor:'#111b' }).setOrigin(0.5);
+    }
+}
+
+// ------ Oyun Sahnesi ------
+class GameScene extends Phaser.Scene {
+    constructor() { super('GameScene'); }
+    create() {
+        this.score = 0;
+        this.gameOver = false;
+        this.bombInterval = 1100;
+        this.buildings = [];
+        const w = this.cameras.main.width, h = this.cameras.main.height;
+
+        // Arka plan
+        this.add.image(w/2, h/2, selectedSide+'_bg').setDisplaySize(w, h);
+
+        // Bina koordinatları (örnek: 3 bina, istediğin gibi çoğaltabilirsin)
+        const buildingsData = [
+            {x:w*0.25, y:h*0.8}, {x:w*0.5, y:h*0.75}, {x:w*0.75, y:h*0.8}
+        ];
+        for(let b of buildingsData){
+            let building = this.add.rectangle(b.x, b.y, 90, 100, 0x888888).setOrigin(0.5,1);
+            building.health = 3; // her bina 3 can
+            building.d = b; // data
+            this.buildings.push(building);
+        }
+
+        // Skor alanı
+        this.scoreText = this.add.text(18, 16, "Score: 0", { fontSize: '22px', fill:'#fff', stroke:'#000', strokeThickness:4 });
+
+        // Bombalar
+        this.rockets = this.physics.add.group();
+        this.time.addEvent({ delay:this.bombInterval, callback:()=>this.spawnRocket(), callbackScope:this, loop:true });
+
+        // Çarpışma
+        this.physics.add.overlap(this.rockets, this.buildings, this.hitBuilding, null, this);
+    }
+
+    spawnRocket() {
+        if(this.gameOver) return;
+        const w = this.cameras.main.width, h = this.cameras.main.height;
+        const startEdge = Phaser.Math.Between(0,2); // 0: yukarı, 1: sol, 2: sağ
+        let startX, startY, targetB = Phaser.Utils.Array.GetRandom(this.buildings.filter(b=>b.health>0));
+        if(!targetB) return;
+        let tx = targetB.x, ty = targetB.y-45;
+        if(startEdge==0) { startX=Phaser.Math.Between(40,w-40); startY=-60; }
+        else if(startEdge==1) { startX=-60; startY=Phaser.Math.Between(80,h*0.7); }
+        else { startX=w+60; startY=Phaser.Math.Between(80,h*0.7); }
+
+        let rocket = this.rockets.create(startX, startY, 'rocket').setScale(0.7).setAngle(Phaser.Math.Between(0,360));
+        this.physics.moveTo(rocket, tx, ty, Phaser.Math.Between(250,340));
+        rocket.setInteractive();
+        rocket.on('pointerdown', ()=>this.destroyRocket(rocket));
+    }
+
+    destroyRocket(rocket) {
+        if(!rocket.active||this.gameOver) return;
+        this.score += 10; this.scoreText.setText("Score: "+this.score);
+        let explosion = this.add.image(rocket.x, rocket.y, "explosion").setScale(1.4);
+        let dove = this.add.image(rocket.x, rocket.y, "dove").setScale(0.5);
+        this.tweens.add({ targets:dove, y:dove.y-90, alpha:0, duration:850, onComplete:()=>dove.destroy() });
+        this.time.delayedCall(180, ()=>explosion.destroy());
+        rocket.destroy();
+    }
+
+    hitBuilding(rocket, building) {
+        if(this.gameOver||building.health<=0) return;
+        rocket.destroy();
+        building.health--;
+        if(building.health<=0) {
+            this.add.image(building.x, building.y-40, "destroyed_building").setScale(0.6);
+        }
+        if(this.buildings.filter(b=>b.health>0).length==0) this.finishGame();
+    }
+
+    finishGame() {
+        this.gameOver = true;
+        // YENİ REKOR/BONUS HESAP
+        let bonus = 0, msg = '';
+        if(this.score > currentHighScore) {
+            bonus = this.score * 100; msg = 'New Score! +' + bonus;
+            if(this.score > leaderboardTopScore) { // global 1. oldun
+                bonus = this.score * 250; msg = 'NEW GLOBAL #1! +' + bonus;
+            }
+        }
+        this.add.text(this.cameras.main.width/2, this.cameras.main.height/2, msg+'\nScore: '+this.score, { fontSize:'34px', fill:'#FFD700', stroke:'#000', strokeThickness:7 }).setOrigin(0.5);
+        // Bot’a skoru gönder
+        if(window.tg && window.tg.sendData){
+            tg.sendData(JSON.stringify({ type: "score_update", user_id: String(currentUser.id), score: this.score }));
+        }
+        this.time.delayedCall(3500, ()=>this.scene.start('LobbyScene'));
+    }
+}
+
+const config = {
+    type: Phaser.AUTO, width: window.innerWidth, height: window.innerHeight,
+    scene: [Preloader, SideSelectionScene, LobbyScene, GameScene],
+    physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
 };
+
+window.addEventListener('load', ()=>{ game = new Phaser.Game(config); });
+window.addEventListener('resize', ()=>{
+    if(game){ game.scale.resize(window.innerWidth, window.innerHeight); }
+});
