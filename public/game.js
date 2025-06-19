@@ -73,9 +73,11 @@ const assets = {
     rocket: 'assets/rocket.png',
     explosion: 'assets/explosion.gif',
     dove: 'assets/dove.png',
-    smoke: 'assets/explosion.gif', // duman efekti için aynı gif, gerekirse ek sprite kullanılır
     coin: 'assets/coin_icon.png',
-    score_icon: 'assets/score_icon.png'
+    score_icon: 'assets/score_icon.png',
+     button:'assets/play_button.png',
+    building_bar:'assets/score.png',
+      smoke: 'assets/smoke_sheet.png' 
 };
 
 // --- Global state ---
@@ -94,8 +96,13 @@ class LobbyScene extends Phaser.Scene {
     const vars = getScaleVars(this);
 
     // BG tam ekran
-    this.add.image(vars.w/2, vars.h/2, 'bg_lobby').setDisplaySize(vars.w, vars.h);
+    this.add.image(vars.w/2, vars.h/2, 'lobby_bg').setDisplaySize(vars.w, vars.h);
+    // Logo (Üstte)
+    this.add.image(w/2, 70, 'logo').setScale(0.21);
 
+    // Score & Coin ikonları (sağ üstte örnek)
+    this.add.image(w - 50, 45, 'score_icon').setScale(0.6);
+    this.add.image(w - 50, 90, 'coin_icon').setScale(0.6);
     await fetchUserStats();
 
     // SAĞ ÜST panel, PEACE'in üstünü kapatmaz!
@@ -193,11 +200,11 @@ class GameScene extends Phaser.Scene {
         this.load.image('coin', assets.coin);
         this.load.image('score_icon', assets.score_icon);
         this.load.spritesheet('explosion', assets.explosion, { frameWidth: 64, frameHeight: 64 });
-    this.load.image('coin_icon', 'assets/coin_icon.png');
-    this.load.image('building_bar', 'assets/score.png');
-    this.load.spritesheet('smoke_anim', 'assets/smoke_sheet.png', { frameWidth: 64, frameHeight: 64 });
-   
-        // ...duman efekti için gerekirse ayrı ekle
+        this.load.image('logo', assets.logo);
+        this.load.image('button', assets.button);
+        this.load.image('lobby_bg', assets.lobby_bg);
+        this.load.image('building_bar', assets.building_bar);
+        this.load.spritesheet('smoke', assets.smoke, { frameWidth: 64, frameHeight: 64 });
     }
     create(data) {
         // Arka plan
@@ -332,7 +339,7 @@ class GameScene extends Phaser.Scene {
                     b.alive = false;
                     // Bina yok olduysa: destroyed_building ve duman efekti
                     let des = this.add.image(b.x, b.y + 15, 'destroyed_building').setDisplaySize(55, 65);
-                    let smoke = this.add.sprite(b.x, b.y - 10, 'explosion').setScale(0.7);
+                    let smoke = this.add.sprite(b.x, b.y - 10, 'smoke').setScale(0.7);
                     this.time.delayedCall(900, () => smoke.destroy());
                 }
                 // Game over kontrol
