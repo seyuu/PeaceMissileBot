@@ -242,7 +242,10 @@ spawnRocket() {
       vx = -speed; vy = 0;
     }
 
- let rocket = this.add.sprite(x, y, 'score_icon').setScale(1);
+let rocket = this.physics.add.sprite(x, y, 'rocket')
+  .setScale(1.2) // büyük olsun test için
+  .setAlpha(1)   // tamamen görünür olsun
+  .setInteractive();
     rocket.body.setVelocity(vx, vy);
     rocket.targetIdx = targetIdx;
     this.rockets.add(rocket);
