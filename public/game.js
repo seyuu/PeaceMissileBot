@@ -118,14 +118,14 @@ class LobbyScene extends Phaser.Scene {
     this.add.text(panelX, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
 
     // Start Mission butonu: ALTTA, ortada (hiçbir yazı üstüne binmez)
-    let btnY = vars.h * 0.30;
+    let btnY = vars.h * 0.70;
     let startBtn = this.add.image(vars.w/2, btnY, 'button')
       .setScale(vars.btnScale).setInteractive();
     let btnLabel = this.add.text(vars.w, btnY, "", { font: `${vars.fontBig}px monospace`, fill: "#13f7f7" }).setOrigin(0.3);
     startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
 
     // Top Players — butonun üstünde, ortada
-    let lbY = btnY - 100;
+    let lbY = btnY - 300;
     this.add.text(vars.w/2, lbY, "Top Players", { font: `bold ${vars.fontMid+2}px monospace`, fill: "#ffe349" }).setOrigin(0.5, 0);
     const leaders = (await fetchLeaderboard()).slice(0, 5);
     lbY += vars.fontMid + 8;
@@ -143,7 +143,7 @@ class LobbyScene extends Phaser.Scene {
       .setInteractive().on('pointerup', () => this.scene.start('HowToPlayScene'));
 
     // En altta BÜYÜK logo
-    this.add.image(vars.w/2, vars.h - 65, 'logo').setScale(vars.logoScale);
+    this.add.image(vars.w/2, vars.h - 35, 'logo').setScale(vars.logoScale);
   }
 }
 
@@ -178,34 +178,35 @@ class GameScene extends Phaser.Scene {
   create() {
     const vars = getScaleVars(this);
 
-    // Arkaplan
-    let bg = this.add.image(vars.w/2, vars.h/2, this.side === 'iran' ? 'bg_iran' : 'bg_israel').setDisplaySize(vars.w, vars.h);
+    // Responsive buildingCoords -- İLK BAŞTA!
+    this.buildingCoords = getResponsiveBuildingCoords(vars.w, vars.h);
 
-    // Skor & toplam health bar
+    // Arkaplan
+    this.add.image(vars.w/2, vars.h/2, this.side === 'iran' ? 'bg_iran' : 'bg_israel').setDisplaySize(vars.w, vars.h);
+
+    // Skor ve health bar
     this.score = 0;
     this.add.text(vars.margin, vars.margin, "Score: ", { font: `${vars.fontMid}px monospace`, fill: "#fff" });
     this.scoreText = this.add.text(vars.margin + 80, vars.margin, "0", { font: `${vars.fontMid}px monospace`, fill: "#fff" });
 
-    // Toplam city health bar (üstte, responsive)
-    this.cityMaxHealth =this.buildingCoords.length * maxBuildingHealth;
+    this.cityMaxHealth = this.buildingCoords.length * maxBuildingHealth;
     this.cityHealth = this.cityMaxHealth;
     let barW = vars.w * 0.58;
     this.healthBarBg = this.add.rectangle(vars.w/2 - barW/2, vars.margin*2.3, barW, 18, 0x333333).setOrigin(0, 0.5);
     this.healthBar = this.add.rectangle(vars.w/2 - barW/2, vars.margin*2.3, barW, 18, 0x1ff547).setOrigin(0, 0.5);
 
-    // Binaları çiz
-    // (İleri: Koordinatları ekrana göre orantılı da yapabilirsin)
-    this.buildingCoords = getResponsiveBuildingCoords(vars.w, vars.h);
- this.buildings = this.buildingCoords.map(coord => ({
-    x: coord.x,
-    y: coord.y,
-    health: maxBuildingHealth,
-    sprite: this.add.rectangle(coord.x, coord.y, 45, 40, 0x74b9ff, 0.2)
-  }));
+    // Binalar
+    this.buildings = this.buildingCoords.map(coord => ({
+      x: coord.x,
+      y: coord.y,
+      health: maxBuildingHealth,
+      sprite: this.add.rectangle(coord.x, coord.y, 45, 40, 0x74b9ff, 0.2)
+    }));
+
     this.destroyedSprites = [];
     this.rockets = this.physics.add.group();
 
-    // Timer ile bomba oluştur
+    // Roketleri zamanlayıcı ile başlat
     this.rocketTimer = this.time.addEvent({
       delay: 1100, loop: true, callback: () => this.spawnRocket()
     });
@@ -225,13 +226,14 @@ class GameScene extends Phaser.Scene {
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
     let targetIdx = Phaser.Math.Between(0, this.buildingCoords.length - 1);
-    let target =  this.buildingCoords[targetIdx];
+    let target = this.buildingCoords[targetIdx];
     let speed = Phaser.Math.Between(170, 260);
     let entrySide = Phaser.Math.Between(0, 4);
 
     let x, y, vx = 0, vy = 0;
+
     if (entrySide <= 2) {
-      // Yukarıdan
+      // Yukarıdan (random x'e gitmek için)
       x = target.x; y = -40;
       vx = 0; vy = speed;
     } else if (entrySide === 3) {
@@ -244,10 +246,11 @@ class GameScene extends Phaser.Scene {
       vx = -speed; vy = 0;
     }
 
-let rocket = this.physics.add.sprite(vars.w/2, 0, 'rocket').setScale(0.8).setInteractive();
-rocket.body.setVelocity(0, 200);
+    let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
+    rocket.body.setVelocity(vx, vy);
     rocket.targetIdx = targetIdx;
     this.rockets.add(rocket);
+
     this.physics.add.overlap(rocket, this.buildings[targetIdx].sprite, () => this.hitBuilding(rocket, targetIdx));
   }
 
@@ -297,6 +300,7 @@ rocket.body.setVelocity(0, 200);
     else this.healthBar.setFillStyle(0x1ff547);
   }
 }
+
 
 // --- Game Over & Skor Bildirimi (Responsive) ---
 class GameOverScene extends Phaser.Scene {
