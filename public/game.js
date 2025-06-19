@@ -248,10 +248,10 @@ spawnRocket() {
       x = w + 40; y = target.y;
       vx = -speed; vy = 0;
     }
+                console.log('Rocket eklendi miiii', x, y);
 
     let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
         console.log('Rocket eklendi', x, y, rocket);
-                console.log('Rocket eklendi miiii', xv, yv, rocket);
     rocket.body.setVelocity(vx, vy);
         console.log('setVelocity eklendi', xv, yv, rocket);
     rocket.targetIdx = targetIdx;
