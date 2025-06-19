@@ -376,32 +376,32 @@ class GameOverScene extends Phaser.Scene {
         this.add.text(this.cameras.main.centerX, 250, `Score: ${data.score}`, { font: '28px monospace', color: "#ffd" }).setOrigin(0.5);
 
          // Skor hesaplamaları:
-    let prevMax = userStats.score || 0;
-    let prevTotal = userStats.total_score || 0;
-    let prevCoins = userStats.total_pmno_coins || 0;
-    let newTotal = prevTotal + data.score;
+        let prevMax = userStats.score || 0;
+        let prevTotal = userStats.total_score || 0;
+        let prevCoins = userStats.total_pmno_coins || 0;
+        let newTotal = prevTotal + data.score;
 
-    // 1. Oyuncu eski rekorunu kırdı mı?
-    let brokePersonalRecord = data.score > prevMax;
-    // 2. Liderlik tablosundaki en yüksek skor (sadece ilk oyuncu varsa)
-    let leaderboardSnap = await fetchLeaderboard();
-    let leaderboardMax = leaderboardSnap[0]?.score || 0;
-    let brokeLeaderboardRecord = data.score > leaderboardMax;
+        // 1. Oyuncu eski rekorunu kırdı mı?
+        let brokePersonalRecord = data.score > prevMax;
+        // 2. Liderlik tablosundaki en yüksek skor (sadece ilk oyuncu varsa)
+        let leaderboardSnap = await fetchLeaderboard();
+        let leaderboardMax = leaderboardSnap[0]?.score || 0;
+        let brokeLeaderboardRecord = data.score > leaderboardMax;
 
-    // Hesaplamalar
-    if (brokePersonalRecord) {
-        userStats.score = data.score;
-        newTotal += data.score * 100;
-    }
-    if (brokeLeaderboardRecord) {
-        newTotal += data.score * 250;
-    }
+        // Hesaplamalar
+        if (brokePersonalRecord) {
+            userStats.score = data.score;
+            newTotal += data.score * 100;
+        }
+        if (brokeLeaderboardRecord) {
+            newTotal += data.score * 250;
+        }
 
-    userStats.total_score = newTotal;
-    userStats.total_pmno_coins = newTotal * 10;
+        userStats.total_score = newTotal;
+        userStats.total_pmno_coins = newTotal * 10;
 
-    // Güncellenmiş skorları Telegram bot.py'ye yolla
-    sendScoreToBot({
+        // Güncellenmiş skorları Telegram bot.py'ye yolla
+        sendScoreToBot({
         score: data.score,
         total_score: userStats.total_score,
         total_pmno_coins: userStats.total_pmno_coins
@@ -420,13 +420,25 @@ class HowToPlayScene extends Phaser.Scene {
   create() {
     const vars = getScaleVars(this);
     this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.96);
-    this.add.text(vars.w/2, vars.h*0.1, "How To Play", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
-    let msg = "Tap the rockets to turn them into peace doves!\nDon't let them hit the city.\nDefend all buildings as long as you can!\nEach rocket = +1 point.\n\nBreak your record for more coins.";
+    this.add.text(vars.w/2, vars.h*0.1, "Oyunun amacını ve kurallarını açıklar.", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
+    let msg = "🕊️ **Barış Füzesi Botuna Hoş Geldiniz!** 🕊️\n\n"
+        "Bu oyunda amacınız, gökyüzündeki füzeleri barış güvercinlerine dönüştürerek "
+        "dünyaya barış getirmek. Her başarılı dönüşüm size puan kazandırır.\n\n"
+        "💰 **PMNOFO Coini Nasıl Kazanılır?**\n"
+        "Her oynadığınız oyunda kazandığınız puan kadar PMNOFO Coini hesabınıza eklenir. "
+        "Ayrıca, eğer yeni bir kişisel rekor kırarsanız, kırdığınız rekor puanının "
+        "**100 katı** kadar devasa bir bonus PMNOFO Coini kazanırsınız! Unutmayın, rekorlar kırın, daha çok coin toplayın!\n\n"
+        "📊 **Genel Liderlik Tablosu**\n"
+        "En yüksek toplam puana veya en çok PMNOFO Coini'ne sahip oyuncuları görmek için "
+        "`/leaderboard` komutunu kullanın. Adınızı zirveye taşıyın!\n\n"
+        "📢 **Unutmayın:** Her bir puanınız, dünyaya bir adım daha fazla barış getirme çabanızı temsil ediyor. "
+        "Haydi, göreve başlayın!";
     this.add.text(vars.w/2, vars.h*0.17, msg, { font: `${vars.fontSmall+3}px monospace`, fill: "#fff", align: "center" }).setOrigin(0.5,0);
     this.add.text(vars.w/2, vars.h - 80, "< Back", { font: `${vars.fontMid}px monospace`, fill: "#67f" })
       .setOrigin(0.5)
       .setInteractive()
       .on('pointerup', () => this.scene.start('LobbyScene'));
+ 
   }
 }
 
@@ -465,7 +477,7 @@ const config = {
     width: gameWidth,
     height: gameHeight,
     backgroundColor: "#000",
-    scene: [LobbyScene, SideSelectScene, GameScene, GameOverScene],
+    scene: [LobbyScene, SideSelectScene, GameScene, GameOverScene, HowToPlayScene, LeaderboardScene],
     physics: { default: "arcade", arcade: { gravity: { y: 0 } } },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
 };
