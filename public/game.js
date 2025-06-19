@@ -98,11 +98,11 @@ class LobbyScene extends Phaser.Scene {
     // BG tam ekran
     this.add.image(vars.w/2, vars.h/2, 'lobby_bg').setDisplaySize(vars.w, vars.h);
     // Logo (Üstte)
-    this.add.image(w/2, 70, 'logo').setScale(0.21);
+    this.add.image(vars.w/2, 70, 'logo').setScale(0.21);
 
     // Score & Coin ikonları (sağ üstte örnek)
-    this.add.image(w - 50, 45, 'score_icon').setScale(0.6);
-    this.add.image(w - 50, 90, 'coin_icon').setScale(0.6);
+    this.add.image(vars.w - 50, 45, 'score_icon').setScale(0.6);
+    this.add.image(vars.w - 50, 90, 'coin_icon').setScale(0.6);
     await fetchUserStats();
 
     // SAĞ ÜST panel, PEACE'in üstünü kapatmaz!
@@ -206,8 +206,7 @@ class GameScene extends Phaser.Scene {
         this.load.image('building_bar', assets.building_bar);
         this.load.spritesheet('smoke', assets.smoke, { frameWidth: 64, frameHeight: 64 });
     }
-    create(data) { 
-        this.scene.start('LobbyScene');
+    create(data) {
         // Arka plan
         let side = data.side || "israel";
         this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, side === "iran" ? "iran_bg" : "israel_bg")
