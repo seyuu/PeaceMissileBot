@@ -2,6 +2,7 @@
 let tg = window.Telegram && window.Telegram.WebApp;
 let currentUser = tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
 
+// (Eğer sadece Firestore'dan okuma için gerekli, aşağıdaki ayarları değiştir)
 const firebaseConfig = {
   apiKey: "AIzaSyBtOkm8dpjVXlzAXCEB5sL_Awqq4HEeemc",
   authDomain: "peacemissile-game.firebaseapp.com",
@@ -30,39 +31,12 @@ async function fetchLeaderboard() {
   return snap.docs.map(doc => doc.data());
 }
 
-// --- Responsive Boyutlar ve Helper ---
-function getScaleVars(scene) {
-  // Boyutları ekrana oranla al, minimum ve maksimum koy
-  const w = scene.cameras.main.width;
-  const h = scene.cameras.main.height;
-  return {
-    w, h,
-    fontBig: Math.max(Math.round(w/20), 18),
-    fontMid: Math.max(Math.round(w/25), 15),
-    fontSmall: Math.max(Math.round(w/32), 12),
-    btnScale: Math.max(w/1400, 0.33),
-    logoScale: Math.max(w/700, 0.21),
-    topPanelW: Math.min(w * 0.55, 330),
-    margin: Math.max(w/48, 10)
-  };
-}
-
-function getResponsiveBuildingCoords(w, h) {
-  return [
-    { x: w * 0.13, y: h * 0.65 },   // örnek: eski 60,500 -> %13, %65
-    { x: w * 0.31, y: h * 0.715 },
-    { x: w * 0.5, y: h * 0.69 },
-    { x: w * 0.69, y: h * 0.72 },
-    { x: w * 0.81, y: h * 0.66 },
-    { x: w * 0.24, y: h * 0.83 },
-    { x: w * 0.43, y: h * 0.84 },
-    { x: w * 0.62, y: h * 0.81 },
-    { x: w * 0.81, y: h * 0.87 },
-    { x: w * 0.48, y: h * 0.78 }
-  ];
-}
-
- 
+// -- Oyun içi binalar için koordinatlar (resimdeki çarpılara göre, gerekirse oynanır) --
+const buildingCoords = [
+  { x: 60, y: 500 },   { x: 130, y: 550 }, { x: 210, y: 530 }, { x: 280, y: 560 },
+  { x: 340, y: 510 },  { x: 100, y: 650 }, { x: 180, y: 650 }, { x: 260, y: 630 },
+  { x: 340, y: 670 },  { x: 200, y: 600 }
+];
 const maxBuildingHealth = 3;
 
 // --- Sprite Yüklemeleri ---
@@ -77,14 +51,13 @@ class BootScene extends Phaser.Scene {
     this.load.image('rocket', 'assets/rocket.png');
     this.load.image('dove', 'assets/dove.png');
     this.load.image('explosion', 'assets/explosion.gif');
+    this.load.image('smoke', 'assets/smoke.png'); // Göndereceğim!
     this.load.image('destroyed_building', 'assets/destroyed_building.png');
     this.load.image('score_icon', 'assets/score_icon.png');
     this.load.image('coin_icon', 'assets/coin_icon.png');
-    this.load.image('building_bar', 'assets/score.png');
+    this.load.image('building_bar', 'assets/score.png'); // Basit bar için kullanılabilir
     this.load.spritesheet('smoke_anim', 'assets/smoke_sheet.png', { frameWidth: 64, frameHeight: 64 });
-    this.load.on('complete', () => {
-    console.log('All assets loaded');
-  });
+   
   }
   create() {
     this.anims.create({
@@ -93,171 +66,247 @@ class BootScene extends Phaser.Scene {
       frameRate: 10,
       repeat: 0
     });
+
     this.scene.start('LobbyScene');
+
   }
 }
 
-// --- Lobby (Responsive, tam ekrana oturur, logo büyük, bilgiler sağ üstte taşmaz) ---
+// --- Lobby (Ana Menü, Kullanıcı Bilgileri, 3 Buton, Logo) ---
 class LobbyScene extends Phaser.Scene {
   constructor() { super('LobbyScene'); }
   async create() {
-    const vars = getScaleVars(this);
-
-    // BG tam ekran
-    this.add.image(vars.w/2, vars.h/2, 'bg_lobby').setDisplaySize(vars.w, vars.h);
+    this.add.image(210, 385, 'bg_lobby').setDisplaySize(420, 770);
 
     await fetchUserStats();
-
-    // SAĞ ÜST panel, PEACE'in üstünü kapatmaz!
-    let panelX = vars.w - vars.topPanelW - vars.margin;
-    let y = vars.margin;
+    let y = 70;
     let statColor = "#ffe349";
-    this.add.text(panelX, y, `Welcome, ${userStats.username || 'Player'}!`, { font: `${vars.fontSmall+2}px monospace`, fill: "#fff" }).setOrigin(0,0);
-    y += vars.fontSmall + 8;
-    this.add.text(panelX, y, `Max Score: ${userStats.score}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
-    y += vars.fontSmall + 4;
-    this.add.text(panelX, y, `Total Score: ${userStats.total_score}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
-    y += vars.fontSmall + 4;
-    this.add.text(panelX, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
+    // Hoşgeldin ve kullanıcı bilgileri
+    this.add.text(20, y, `Welcome, ${userStats.username || 'Player'}!`, { font: "24px monospace", fill: "#fff" });
+    y += 40;
+    this.add.image(35, y + 12, 'score_icon').setScale(0.7);
+    this.add.text(60, y, `Max Score: ${userStats.score}`, { font: "16px monospace", fill: statColor });
+    y += 25;
+    this.add.text(60, y, `Total Score: ${userStats.total_score}`, { font: "16px monospace", fill: statColor });
+    y += 25;
+    this.add.image(35, y + 12, 'coin_icon').setScale(0.7);
+    this.add.text(60, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: "16px monospace", fill: statColor });
+    y += 38;
 
-    // Start Mission butonu: ALTTA, ortada (hiçbir yazı üstüne binmez)
-    let btnY = vars.h * 0.60;
-    let startBtn = this.add.image(vars.w/2, btnY, 'button')
-      .setScale(vars.btnScale).setInteractive();
-    let btnLabel = this.add.text(vars.w, btnY, "", { font: `${vars.fontBig}px monospace`, fill: "#13f7f7" }).setOrigin(0.3);
-    startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
-
-    // Top Players — butonun üstünde, ortada
-    let lbY = btnY - 300;
-    this.add.text(vars.w/2, lbY, "Top Players", { font: `bold ${vars.fontMid+2}px monospace`, fill: "#ffe349" }).setOrigin(0.5, 0);
+    // --- Top Players (maks 5 kişi)
     const leaders = (await fetchLeaderboard()).slice(0, 5);
-    lbY += vars.fontMid + 8;
+    let lbY = y;
+    this.add.text(120, lbY, "Top Players", { font: "bold 19px monospace", fill: "#ffe349" });
+    lbY += 22;
     leaders.forEach((u, i) => {
-      this.add.text(vars.w/2, lbY + i * (vars.fontSmall + 8), `${i + 1}. ${u.username || 'Anon'} - ${u.total_score} pts`, { font: `${vars.fontSmall+2}px monospace`, fill: "#fff" }).setOrigin(0.5, 0);
+      this.add.text(90, lbY + i * 18, `${i + 1}. ${u.username || 'Anon'} - ${u.total_score} pts`, { font: "15px monospace", fill: "#fff" });
     });
+    lbY += leaders.length * 18 + 12;
 
-    // Menü: Leaderboard & How to Play (aşağıda iki yana)
-    let menuY = btnY + startBtn.displayHeight/2 + 28;
-    this.add.text(vars.w/4, menuY, "Leaderboard", { font: `${vars.fontMid}px monospace`, fill: "#ffe349" })
-      .setOrigin(0.5,0)
-      .setInteractive().on('pointerup', () => this.scene.start('LeaderboardScene'));
-    this.add.text(vars.w - vars.w/4, menuY, "How to Play?", { font: `${vars.fontMid}px monospace`, fill: "#43c0f7" })
-      .setOrigin(0.5, 0)
-      .setInteractive().on('pointerup', () => this.scene.start('HowToPlayScene'));
+    // --- Start Mission Button (tam alta)
+    const startBtn = this.add.image(210, lbY + 32, 'button').setScale(0.38).setInteractive();
+    startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
+    this.add.text(210, lbY + 24, "START MISSION", { font: "23px monospace", fill: "#13f7f7" }).setOrigin(0.5, 0);
 
-    // En altta BÜYÜK logo
-    this.add.image(vars.w/2, vars.h - 95, 'logo').setScale(vars.logoScale);
+    // --- Alt menü
+    this.add.text(40, lbY + 85, "Leaderboard", { font: "19px monospace", fill: "#ffe349" })
+        .setInteractive()
+        .on('pointerup', () => this.scene.start('LeaderboardScene'));
+    this.add.text(280, lbY + 85, "How to Play?", { font: "19px monospace", fill: "#43c0f7" })
+        .setInteractive()
+        .on('pointerup', () => this.scene.start('HowToPlayScene'));
+
+    // --- En altta logo
+    this.add.image(210, 750, 'logo').setScale(0.18);
   }
 }
 
-// --- Taraf Seçimi ---
+
+// --- Taraf Seçimi (Resimli, Yazılar kısa, geçiş animasyonu olabilir) ---
 class SideSelectScene extends Phaser.Scene {
   constructor() { super('SideSelectScene'); }
   create() {
-    const vars = getScaleVars(this);
     this.cameras.main.fadeIn(300, 0, 0, 0);
-    this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.95);
-    this.add.text(vars.w/2, vars.h*0.08, "Choose your side", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
+    this.add.rectangle(210, 385, 420, 770, 0x000000, 0.95);
+
+    this.add.text(60, 70, "Choose your side", { font: "35px monospace", fill: "#fff" });
 
     // İsrail
-    let btn1 = this.add.image(vars.w/3, vars.h/3, 'bg_israel').setDisplaySize(vars.w/3.2, vars.h/4.8).setInteractive();
-    let tx1 = this.add.text(vars.w/3, vars.h/3+70, "Israel", { font: `${vars.fontMid}px monospace`, fill: "#e2e2e2" }).setOrigin(0.5);
+    let btn1 = this.add.image(120, 220, 'bg_israel').setDisplaySize(120, 130).setInteractive();
+    let tx1 = this.add.text(70, 280, "Israel", { font: "22px monospace", fill: "#e2e2e2" });
     btn1.on('pointerup', () => this.scene.start('GameScene', { side: 'israel' }));
 
     // İran
-    let btn2 = this.add.image(vars.w*2/3, vars.h/3, 'bg_iran').setDisplaySize(vars.w/3.2, vars.h/4.8).setInteractive();
-    let tx2 = this.add.text(vars.w*2/3, vars.h/3+70, "Iran", { font: `${vars.fontMid}px monospace`, fill: "#e2e2e2" }).setOrigin(0.5);
+    let btn2 = this.add.image(300, 220, 'bg_iran').setDisplaySize(120, 130).setInteractive();
+    let tx2 = this.add.text(250, 280, "Iran", { font: "22px monospace", fill: "#e2e2e2" });
     btn2.on('pointerup', () => this.scene.start('GameScene', { side: 'iran' }));
 
-    this.add.image(vars.w/2, vars.h-65, 'logo').setScale(vars.logoScale * 0.8);
+    // Geri dönmek için logo veya alan bırakabilirsin
+    this.add.image(210, 750, 'logo').setScale(0.14);
   }
 }
 
-// --- Oyun Ana Sahnesi (Responsive rocket spawn, ekrana göre tam path) ---
+// --- Oyun Ana Sahnesi ---
 class GameScene extends Phaser.Scene {
-  constructor() { super({ key: 'GameScene', physics: { arcade: { debug: false } } }); }
+  constructor() { super('GameScene'); }
   init(data) { this.side = data.side || 'israel'; }
 
   create() {
-    const vars = getScaleVars(this);
-    this.buildingCoords = getResponsiveBuildingCoords(vars.w, vars.h);
+    // Arkaplan
+    let bg = this.add.image(210, 385, this.side === 'iran' ? 'bg_iran' : 'bg_israel').setDisplaySize(420, 770);
 
-    // --- Binalar ve üzerlerine bar ---
-    this.buildings = this.buildingCoords.map(coord => {
-      let group = {};
-      group.x = coord.x;
-      group.y = coord.y;
-      group.health = maxBuildingHealth;
-      // Bina görseli
-      group.sprite = this.add.rectangle(coord.x, coord.y, 45, 40, 0x74b9ff, 0.25);
-      // Health bar (üstünde)
-      group.barBg = this.add.rectangle(coord.x, coord.y - 35, 38, 6, 0x333333, 0.7);
-      group.bar = this.add.rectangle(coord.x, coord.y - 35, 36, 4, 0x1ff547, 0.99).setOrigin(0.5, 0.5);
-      return group;
-    });
-
-    this.rockets = this.physics.add.group();
+    // Skor & toplam health bar
     this.score = 0;
+    this.add.text(25, 25, "Score: ", { font: "28px monospace", fill: "#fff" });
+    this.scoreText = this.add.text(140, 25, "0", { font: "28px monospace", fill: "#fff" });
 
-    // Oyun döngüsü — roketleri gönder
+    // Toplam city health bar (üstte)
+    this.cityMaxHealth = buildingCoords.length * maxBuildingHealth;
+    this.cityHealth = this.cityMaxHealth;
+    this.healthBarBg = this.add.rectangle(90, 65, 240, 18, 0x333333).setOrigin(0, 0.5);
+    this.healthBar = this.add.rectangle(90, 65, 240, 18, 0x1ff547).setOrigin(0, 0.5);
+
+    // Binaları çiz
+    this.buildings = buildingCoords.map(coord => ({
+      x: coord.x,
+      y: coord.y,
+      health: maxBuildingHealth,
+      sprite: this.add.rectangle(coord.x, coord.y, 45, 40, 0x74b9ff, 0.2)
+    }));
+
+    // Destroyed binalar için dizi
+    this.destroyedSprites = [];
+
+    // Bombaları grup yap
+    this.rockets = this.physics.add.group();
+
+    // Timer ile bomba oluştur
     this.rocketTimer = this.time.addEvent({
-      delay: 1100,
-      loop: true,
-      callback: () => {
-        let idx = Phaser.Math.Between(0, this.buildings.length - 1);
-        let target = this.buildings[idx];
-
-        let x = target.x;
-        let y = 0;
-        let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
-        rocket.body.setVelocity(0, 230); // YUKARIDAN AŞAĞI HIZ
-        rocket.targetIdx = idx;
-        this.rockets.add(rocket);
-
-        // Çakışınca
-        this.physics.add.overlap(rocket, target.sprite, () => {
-          rocket.destroy();
-          // Bina health azalt
-          target.health--;
-          // Health bar güncelle
-          target.bar.width = Math.max(0, (target.health / maxBuildingHealth) * 36);
-          if (target.health <= 0) {
-            target.sprite.setFillStyle(0x333333, 0.35);
-            target.bar.setFillStyle(0xff2323);
-          }
-        });
-      }
+      delay: 1100, loop: true, callback: () => this.spawnRocket()
     });
 
-    // Roket patlat (tıkla)
+    // Mouse/touch ile bomba patlat
     this.input.on('gameobjectdown', (pointer, rocket) => {
       if (rocket.texture && rocket.texture.key === 'rocket') {
-        rocket.destroy();
-        this.score++;
-        // Skoru ekranda güncellemek için buraya kod ekleyebilirsin
+        this.explodeRocket(rocket);
       }
     });
+
+    // Her frame health bar güncelle
+    this.events.on('update', this.updateHealthBar, this);
   }
+
+  spawnRocket() {
+  // 0-2: yukarıdan, 3: soldan, 4: sağdan
+  let entrySide = Phaser.Math.Between(0, 4);
+  let speed = Phaser.Math.Between(170, 260);
+  let targetIdx = Phaser.Math.Between(0, buildingCoords.length - 1);
+  let target = buildingCoords[targetIdx];
+
+  let x, y, vx = 0, vy = 0;
+  if (entrySide <= 2) {
+    // Yukarıdan düz
+    x = target.x;
+    y = 0;
+    vx = 0;
+    vy = speed;
+  } else if (entrySide === 3) {
+    // Soldan sağa (bina yüksekliğine göre)
+    x = 0;
+    y = target.y;
+    vx = speed;
+    vy = 0;
+  } else {
+    // Sağdan sola
+    x = 420;
+    y = target.y;
+    vx = -speed;
+    vy = 0;
+  }
+
+  // Roketi ekle
+  let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
+  rocket.body.setVelocity(vx, vy);
+  rocket.targetIdx = targetIdx;
+  this.rockets.add(rocket);
+
+  // Çarpışma ayarla
+  this.physics.add.overlap(rocket, this.buildings[targetIdx].sprite, () => this.hitBuilding(rocket, targetIdx));
 }
 
 
-// --- Game Over & Skor Bildirimi (Responsive) ---
+  explodeRocket(rocket) {
+    // Patlama
+    let exp = this.add.sprite(rocket.x, rocket.y, 'explosion').setScale(1.4);
+    exp.play && exp.play('explode');
+    this.time.delayedCall(400, () => exp.destroy());
+    rocket.destroy();
+    // Duman efekti animasyonlu:
+    showSmoke(this, rocket.x, rocket.y - 20);
+
+    // Güvercin efekti
+    let dove = this.add.sprite(rocket.x, rocket.y, 'dove').setScale(0.25);
+    this.tweens.add({
+      targets: dove, y: dove.y - 90, alpha: 0, duration: 1200, onComplete: () => dove.destroy()
+    });
+
+    // Skor
+    this.score += 1;
+    this.scoreText.setText(this.score);
+
+    // Skor kaydını Telegram'a gönder
+    sendScoreToBot(this.score);
+  }
+
+  hitBuilding(rocket, idx) {
+    rocket.destroy();
+
+    // Patlama ve duman efekti
+    let exp = this.add.sprite(rocket.x, rocket.y, 'explosion').setScale(1.5);
+    let smoke = this.add.sprite(rocket.x, rocket.y - 20, 'smoke_anim').setScale(0.7).setAlpha(0.8);
+    this.time.delayedCall(350, () => exp.destroy());
+    this.tweens.add({ targets: smoke, alpha: 0, duration: 1700, onComplete: () => smoke.destroy() });
+
+    // Bina health azalt
+    let building = this.buildings[idx];
+    building.health -= 1;
+    this.cityHealth -= 1;
+    if (building.health <= 0 && !this.destroyedSprites[idx]) {
+      // Destroyed bina
+      building.sprite.setFillStyle(0x333333, 0.45);
+      this.destroyedSprites[idx] = this.add.image(building.x, building.y, 'destroyed_building').setScale(0.19);
+      showSmoke(this, building.x, building.y - 50);
+    }
+
+    // Game over
+    if (this.cityHealth <= 0) {
+      this.rocketTimer.remove();
+      this.time.delayedCall(850, () => this.scene.start('GameOverScene', { score: this.score }));
+    }
+  }
+
+  updateHealthBar() {
+    this.healthBar.width = 240 * (this.cityHealth / this.cityMaxHealth);
+    if (this.cityHealth / this.cityMaxHealth < 0.33) this.healthBar.setFillStyle(0xff2323);
+    else if (this.cityHealth / this.cityMaxHealth < 0.6) this.healthBar.setFillStyle(0xffcc29);
+    else this.healthBar.setFillStyle(0x1ff547);
+  }
+}
+
+// --- Game Over & Skor Bildirimi ---
 class GameOverScene extends Phaser.Scene {
   constructor() { super('GameOverScene'); }
   create(data) {
-    const vars = getScaleVars(this);
     this.cameras.main.fadeIn(200, 0, 0, 0);
-    this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x181818, 0.96);
-    this.add.text(vars.w/2, vars.h/3, "GAME OVER", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
-    this.add.text(vars.w/2, vars.h/2.35, `Score: ${data.score || 0}`, { font: `${vars.fontMid+6}px monospace`, fill: "#23d4fc" }).setOrigin(0.5);
+    this.add.rectangle(210, 385, 420, 770, 0x181818, 0.96);
+    this.add.text(120, 220, "GAME OVER", { font: "36px monospace", fill: "#fff" });
+    this.add.text(135, 280, `Score: ${data.score || 0}`, { font: "26px monospace", fill: "#23d4fc" });
 
-    let btn = this.add.text(vars.w/2, vars.h/1.7, "Restart", { font: `${vars.fontMid+3}px monospace`, fill: "#ffda45", backgroundColor: "#23262f" })
-            .setOrigin(0.5)
-      .setInteractive()
-      .on('pointerup', () => this.scene.start('LobbyScene'));
-
-    // Büyük logo
-    this.add.image(vars.w/2, vars.h - 65, 'logo').setScale(vars.logoScale);
+    // Yeniden başlat
+    let btn = this.add.text(160, 360, "Restart", { font: "26px monospace", fill: "#ffda45", backgroundColor: "#23262f" })
+      .setInteractive().on('pointerup', () => this.scene.start('LobbyScene'));
+    // Logo en alta
+    this.add.image(210, 750, 'logo').setScale(0.13);
   }
 }
 
@@ -265,35 +314,24 @@ class GameOverScene extends Phaser.Scene {
 class HowToPlayScene extends Phaser.Scene {
   constructor() { super('HowToPlayScene'); }
   create() {
-    const vars = getScaleVars(this);
-    this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.96);
-    this.add.text(vars.w/2, vars.h*0.1, "How To Play", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
+    this.add.rectangle(210, 385, 420, 770, 0x000000, 0.96);
+    this.add.text(80, 80, "How To Play", { font: "28px monospace", fill: "#fff" });
     let msg = "Tap the rockets to turn them into peace doves!\nDon't let them hit the city.\nDefend all buildings as long as you can!\nEach rocket = +1 point.\n\nBreak your record for more coins.";
-    this.add.text(vars.w/2, vars.h*0.17, msg, { font: `${vars.fontSmall+3}px monospace`, fill: "#fff", align: "center" }).setOrigin(0.5,0);
-    this.add.text(vars.w/2, vars.h - 80, "< Back", { font: `${vars.fontMid}px monospace`, fill: "#67f" })
-      .setOrigin(0.5)
-      .setInteractive()
-      .on('pointerup', () => this.scene.start('LobbyScene'));
+    this.add.text(40, 140, msg, { font: "20px monospace", fill: "#fff" });
+    this.add.text(120, 700, "< Back", { font: "21px monospace", fill: "#67f" }).setInteractive().on('pointerup', () => this.scene.start('LobbyScene'));
   }
 }
-
 class LeaderboardScene extends Phaser.Scene {
   constructor() { super('LeaderboardScene'); }
   async create() {
-    const vars = getScaleVars(this);
-    this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.93);
-    this.add.text(vars.w/2, vars.h*0.11, "Leaderboard", { font: `${vars.fontBig}px monospace`, fill: "#ffe349" }).setOrigin(0.5,0);
-
+    this.add.rectangle(210, 385, 420, 770, 0x000000, 0.93);
+    this.add.text(120, 70, "Leaderboard", { font: "29px monospace", fill: "#ffe349" });
     const leaders = await fetchLeaderboard();
-    let y = vars.h*0.17;
+    let y = 130;
     leaders.forEach((u, i) => {
-      this.add.text(vars.w/2, y + i * (vars.fontSmall+16), `${i + 1}. ${u.username || "Anon"} - ${u.total_score} pts`, { font: `${vars.fontSmall+4}px monospace`, fill: "#fff" }).setOrigin(0.5,0);
+      this.add.text(70, y + i * 38, `${i + 1}. ${u.username || "Anon"} - ${u.total_score} pts`, { font: "22px monospace", fill: "#fff" });
     });
-
-    this.add.text(vars.w/2, vars.h - 80, "< Back", { font: `${vars.fontMid}px monospace`, fill: "#67f" })
-      .setOrigin(0.5)
-      .setInteractive()
-      .on('pointerup', () => this.scene.start('LobbyScene'));
+    this.add.text(120, 700, "< Back", { font: "21px monospace", fill: "#67f" }).setInteractive().on('pointerup', () => this.scene.start('LobbyScene'));
   }
 }
 
@@ -316,18 +354,16 @@ function showSmoke(scene, x, y) {
     smoke.on('animationcomplete', () => smoke.destroy());
 }
 
+
 // --- Phaser Başlat ---
-const gameWidth = window.innerWidth;
-const gameHeight = window.innerHeight;
 const config = {
   type: Phaser.AUTO,
   parent: 'phaser-game',
-  width: gameWidth,
-  height: gameHeight,
+  width: 420,
+  height: 770,
   backgroundColor: "#000",
   scene: [BootScene, LobbyScene, SideSelectScene, GameScene, GameOverScene, HowToPlayScene, LeaderboardScene],
   physics: { default: "arcade", arcade: { gravity: { y: 0 } } },
-  scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH }
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
 };
-
 const game = new Phaser.Game(config);
