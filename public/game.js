@@ -80,49 +80,47 @@ class LobbyScene extends Phaser.Scene {
 
     await fetchUserStats();
     let y = 70;
-
+    let statColor = "#ffe349";
     // Hoşgeldin ve kullanıcı bilgileri
     this.add.text(20, y, `Welcome, ${userStats.username || 'Player'}!`, { font: "24px monospace", fill: "#fff" });
     y += 40;
     this.add.image(35, y + 12, 'score_icon').setScale(0.7);
-    this.add.text(60, y, `Max Score: ${userStats.score}  Total Score: ${userStats.total_score}`, { font: "16px monospace", fill: "#fff" });
+    this.add.text(60, y, `Max Score: ${userStats.score}`, { font: "16px monospace", fill: statColor });
+    y += 25;
+    this.add.text(60, y, `Total Score: ${userStats.total_score}`, { font: "16px monospace", fill: statColor });
     y += 25;
     this.add.image(35, y + 12, 'coin_icon').setScale(0.7);
-    this.add.text(60, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: "16px monospace", fill: "#fff" });
-    y += 35;
+    this.add.text(60, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: "16px monospace", fill: statColor });
+    y += 38;
 
-    // Oyun amacı (How to play kısaca)
-    this.add.text(20, y, "Goal: Tap the rockets before they hit the city!\nEach rocket saved = +1 point\nBreak your record for bonus coins.", { font: "15px monospace", fill: "#fff" });
-    y += 60;
-
-    // --- Start Mission Butonu
-    const startBtn = this.add.image(210, y + 25, 'button').setScale(0.38).setInteractive();
-    this.add.text(150, y + 15, "START MISSION", { font: "23px monospace", fill: "#13f7f7" });
-    startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
-
-    // --- Leaderboard Butonu
-    const lbBtn = this.add.text(60, y + 95, "Leaderboard", { font: "22px monospace", fill: "#ffe349", backgroundColor: "#1c222f" })
-      .setInteractive()
-      .on('pointerup', () => this.scene.start('LeaderboardScene'));
-
-    // --- How to Play Butonu
-    const htpBtn = this.add.text(250, y + 95, "How to Play?", { font: "22px monospace", fill: "#43c0f7", backgroundColor: "#1c222f" })
-      .setInteractive()
-      .on('pointerup', () => this.scene.start('HowToPlayScene'));
-
-    // --- Logo en alta
-    this.add.image(210, 750, 'logo').setScale(0.18);
-
-    // --- Leaderboardı hızlıca ekrana da çekelim
-    const leaders = await fetchLeaderboard();
-    let lbY = y + 135;
-    this.add.text(120, lbY, "Top Players", { font: "bold 19px monospace", fill: "#ff0" });
+    // --- Top Players (maks 5 kişi)
+    const leaders = (await fetchLeaderboard()).slice(0, 5);
+    let lbY = y;
+    this.add.text(120, lbY, "Top Players", { font: "bold 19px monospace", fill: "#ffe349" });
     lbY += 22;
     leaders.forEach((u, i) => {
       this.add.text(90, lbY + i * 18, `${i + 1}. ${u.username || 'Anon'} - ${u.total_score} pts`, { font: "15px monospace", fill: "#fff" });
     });
+    lbY += leaders.length * 18 + 12;
+
+    // --- Start Mission Button (tam alta)
+    const startBtn = this.add.image(210, lbY + 32, 'button').setScale(0.38).setInteractive();
+    startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
+    this.add.text(210, lbY + 24, "START MISSION", { font: "23px monospace", fill: "#13f7f7" }).setOrigin(0.5, 0);
+
+    // --- Alt menü
+    this.add.text(40, lbY + 85, "Leaderboard", { font: "19px monospace", fill: "#ffe349" })
+        .setInteractive()
+        .on('pointerup', () => this.scene.start('LeaderboardScene'));
+    this.add.text(280, lbY + 85, "How to Play?", { font: "19px monospace", fill: "#43c0f7" })
+        .setInteractive()
+        .on('pointerup', () => this.scene.start('HowToPlayScene'));
+
+    // --- En altta logo
+    this.add.image(210, 750, 'logo').setScale(0.18);
   }
 }
+
 
 // --- Taraf Seçimi (Resimli, Yazılar kısa, geçiş animasyonu olabilir) ---
 class SideSelectScene extends Phaser.Scene {
@@ -199,26 +197,43 @@ class GameScene extends Phaser.Scene {
   }
 
   spawnRocket() {
-    // Rastgele bina veya üstten/yanlardan rastgele noktalar
-    let rand = Phaser.Math.Between(0, buildingCoords.length - 1);
-    let bx = buildingCoords[rand].x;
-    let speed = Phaser.Math.Between(160, 270);
+  // 0-2: yukarıdan, 3: soldan, 4: sağdan
+  let entrySide = Phaser.Math.Between(0, 4);
+  let speed = Phaser.Math.Between(170, 260);
+  let targetIdx = Phaser.Math.Between(0, buildingCoords.length - 1);
+  let target = buildingCoords[targetIdx];
 
-    let fromSide = Phaser.Math.Between(0, 4); // 0-1-2 yukarıdan, 3 soldan, 4 sağdan
-    let x = bx, y = 0, vx = 0, vy = speed;
-
-    if (fromSide === 3) { x = 0; y = bx; vx = speed; vy = 0; }
-    else if (fromSide === 4) { x = 420; y = bx; vx = -speed; vy = 0; }
-
-    let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
-    rocket.body.setVelocity(vx, vy);
-
-    rocket.targetIdx = rand; // Çarpacağı bina
-    this.rockets.add(rocket);
-
-    // Çarpma
-    this.physics.add.overlap(rocket, this.buildings[rand].sprite, () => this.hitBuilding(rocket, rand));
+  let x, y, vx = 0, vy = 0;
+  if (entrySide <= 2) {
+    // Yukarıdan düz
+    x = target.x;
+    y = 0;
+    vx = 0;
+    vy = speed;
+  } else if (entrySide === 3) {
+    // Soldan sağa (bina yüksekliğine göre)
+    x = 0;
+    y = target.y;
+    vx = speed;
+    vy = 0;
+  } else {
+    // Sağdan sola
+    x = 420;
+    y = target.y;
+    vx = -speed;
+    vy = 0;
   }
+
+  // Roketi ekle
+  let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
+  rocket.body.setVelocity(vx, vy);
+  rocket.targetIdx = targetIdx;
+  this.rockets.add(rocket);
+
+  // Çarpışma ayarla
+  this.physics.add.overlap(rocket, this.buildings[targetIdx].sprite, () => this.hitBuilding(rocket, targetIdx));
+}
+
 
   explodeRocket(rocket) {
     // Patlama
