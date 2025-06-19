@@ -118,10 +118,10 @@ class LobbyScene extends Phaser.Scene {
     this.add.text(panelX, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
 
     // Start Mission butonu: ALTTA, ortada (hiçbir yazı üstüne binmez)
-    let btnY = vars.h * 0.80;
+    let btnY = vars.h * 0.30;
     let startBtn = this.add.image(vars.w/2, btnY, 'button')
       .setScale(vars.btnScale).setInteractive();
-    let btnLabel = this.add.text(vars.w/2, btnY, "", { font: `${vars.fontBig}px monospace`, fill: "#13f7f7" }).setOrigin(0.7);
+    let btnLabel = this.add.text(vars.w, btnY, "", { font: `${vars.fontBig}px monospace`, fill: "#13f7f7" }).setOrigin(0.3);
     startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
 
     // Top Players — butonun üstünde, ortada
@@ -195,13 +195,13 @@ class GameScene extends Phaser.Scene {
 
     // Binaları çiz
     // (İleri: Koordinatları ekrana göre orantılı da yapabilirsin)
-    this.buildings = this.buildingCoords.map(coord => ({
-      x: coord.x,
-      y: coord.y,
-      health: maxBuildingHealth,
-      sprite: this.add.rectangle(coord.x, coord.y, 45, 40, 0x74b9ff, 0.2)
-    }));
-
+    this.buildingCoords = getResponsiveBuildingCoords(vars.w, vars.h);
+ this.buildings = this.buildingCoords.map(coord => ({
+    x: coord.x,
+    y: coord.y,
+    health: maxBuildingHealth,
+    sprite: this.add.rectangle(coord.x, coord.y, 45, 40, 0x74b9ff, 0.2)
+  }));
     this.destroyedSprites = [];
     this.rockets = this.physics.add.group();
 
