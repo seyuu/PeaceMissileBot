@@ -1,7 +1,14 @@
 let tg, currentUser, db;
 
 // --- Oyun Konfigürasyonu ---
-const firebaseConfig = { /* ...firebase config... */ };
+const firebaseConfig = {
+  apiKey: "AIzaSyBtOkm8dpjVXlzAXCEB5sL_Awqq4HEeemc",
+  authDomain: "peacemissile-game.firebaseapp.com",
+  projectId: "peacemissile-game",
+  storageBucket: "peacemissile-game.firebasestorage.app",
+  messagingSenderId: "641906716058",
+  appId: "1:641906716058:web:1376e93994fab29f049e23"
+};
 
 // Referans oranlar (binalar için) - Genişlik ve yükseklik %'si
 const BUILDINGS = [
@@ -71,121 +78,141 @@ class LobbyScene extends Phaser.Scene {
     }
 }
 
-// --- Oyun sahnesi ---
 class GameScene extends Phaser.Scene {
-    constructor() { super({ key: 'GameScene' }); }
-    init(data) { this.selectedSide = data.side || 'israel'; }
-    create() {
-        const w = this.cameras.main.width, h = this.cameras.main.height;
-        this.add.image(w/2, h/2, this.selectedSide === "iran" ? "iran_bg" : "israel_bg").setDisplaySize(w, h);
+    constructor() {
+        super('GameScene');
+    }
 
-        // --- Binalar ---
-        this.buildings = this.physics.add.staticGroup();
+    preload() {
+        this.load.image('bg', 'assets/israel_bg.jpg'); // Arka plan örnek
+        this.load.image('rocket', 'assets/rocket.png');
+        this.load.image('destroyed_building', 'assets/destroyed_building.png');
+        this.load.image('explosion', 'assets/explosion.gif');
+        // diğer assetler...
+    }
+
+    create() {
+        const w = this.sys.game.config.width;
+        const h = this.sys.game.config.height;
+
+        // Arka plan
+        this.add.image(w/2, h/2, 'bg').setDisplaySize(w, h);
+
+        // Skor
+        this.score = 0;
+        this.scoreText = this.add.text(24, 24, 'Score: 0', { fontSize: '32px', fill: '#fff', stroke:'#000', strokeThickness: 4 });
+
+        // Bina bilgileri ve sprite'ları
         this.buildingSprites = [];
-        BUILDINGS.forEach((b, idx) => {
-            const bx = w*b.x, by = h*b.y;
-            const bw = w*b.w, bh = h*b.h;
-            const bSprite = this.add.rectangle(bx, by, bw, bh, 0x888888).setOrigin(0.5,0.5);
-            this.physics.add.existing(bSprite, true);
-            bSprite.health = 3;
-            this.buildings.add(bSprite);
-            this.buildingSprites.push(bSprite);
+        let buildingsData = [
+            { x: w*0.30, y: h-120, width: 80, height: 120 },
+            { x: w*0.50, y: h-120, width: 80, height: 120 },
+            { x: w*0.70, y: h-120, width: 80, height: 120 }
+        ];
+        buildingsData.forEach(data => {
+            let b = this.physics.add.staticImage(data.x, data.y, null)
+                .setDisplaySize(data.width, data.height)
+                .setOrigin(0.5,1)
+                .setVisible(true);
+            b.health = 3;
+            b.active = true;
+            this.buildingSprites.push(b);
         });
 
-        // --- Skor ---
-        this.score = 0;
-        this.scoreText = this.add.text(20, 20, "Score: 0", { fontSize: "30px", fill: "#fff", stroke:"#000", strokeThickness:4 });
-
-        // --- Roketler ---
+        // Roket grubu
         this.rockets = this.physics.add.group();
-        this.physics.add.collider(this.rockets, this.buildings, this.hitBuilding, null, this);
 
-        // --- Sürekli bomba at (dikey/yatay random)
-        this.time.addEvent({ delay: 1300, callback: this.spawnRocket, callbackScope: this, loop: true });
+        // Roket-bina çarpışma
+        this.physics.add.collider(this.rockets, this.buildingSprites, this.hitBuilding, null, this);
+
+        // Her 1.2sn'de bir roket üret
+        this.time.addEvent({
+            delay: 1200,
+            loop: true,
+            callback: ()=>this.spawnRocket()
+        });
     }
+
     spawnRocket() {
-        const w = this.cameras.main.width, h = this.cameras.main.height;
-        // 70% dikey, 30% yatay bombalar
-        const mode = Math.random();
-        let startX, startY, velX, velY, angle;
-        let target = Phaser.Utils.Array.GetRandom(this.buildingSprites);
+        // Dikey olarak rastgele X'de, yukarıdan aşağıya düşecek
+        const w = this.sys.game.config.width;
+        let x = Phaser.Math.Between(w*0.15, w*0.85);
+        let rocket = this.rockets.create(x, -50, 'rocket');
+        rocket.setVelocityY(Phaser.Math.Between(280, 400));
+        rocket.setScale(0.55);
 
-        if (mode < 0.7) {
-            // Dikey yukarıdan aşağıya
-            startX = Phaser.Math.Between(target.x-20, target.x+20);
-            startY = -60;
-            velX = 0;
-            velY = Phaser.Math.Between(350, 420);
-            angle = 180;
-        } else {
-            // Soldan sağa ya da sağdan sola
-            if (Math.random() < 0.5) {
-                // Soldan sağa
-                startX = -60; startY = Phaser.Math.Between(h*0.45, h*0.80);
-                velX = Phaser.Math.Between(350, 420); velY = 0;
-                angle = 90;
-            } else {
-                // Sağdan sola
-                startX = w+60; startY = Phaser.Math.Between(h*0.45, h*0.80);
-                velX = -Phaser.Math.Between(350, 420); velY = 0;
-                angle = -90;
-            }
-        }
-        // Roket oluştur
-        let rocket = this.rockets.create(startX, startY, 'rocket');
-        rocket.setVelocity(velX, velY);
-        rocket.setAngle(angle);
         rocket.setInteractive();
-        rocket.on("pointerdown", ()=>this.destroyRocket(rocket));
+        rocket.on('pointerdown', () => this.destroyRocket(rocket));
     }
+
     destroyRocket(rocket) {
         if (!rocket.active) return;
-        this.score += 10; this.scoreText.setText("Score: "+this.score);
-        let ex = this.add.image(rocket.x, rocket.y, 'explosion').setScale(1.1);
-        this.time.delayedCall(250, ()=>ex.destroy());
-        let dove = this.add.image(rocket.x, rocket.y, 'dove').setScale(0.5);
-        this.tweens.add({ targets: dove, y: dove.y-100, alpha:0, duration:900, onComplete:()=>dove.destroy() });
+
+        // Skor artır
+        this.score += 10;
+        this.scoreText.setText('Score: ' + this.score);
+
+        // Patlama animasyonu
+        let explosion = this.add.image(rocket.x, rocket.y, 'explosion').setScale(0.7);
+        this.time.delayedCall(550, ()=>explosion.destroy());
+
+        // Güvercin, duman vs de çıkarabilirsin
         rocket.destroy();
     }
+
     hitBuilding(rocket, building) {
-        if (!rocket.active) return;
+        if (!rocket.active || !building.active) return;
+
         building.health--;
-        let ex = this.add.image(rocket.x, rocket.y, 'explosion').setScale(1.3);
-        this.time.delayedCall(350, ()=>ex.destroy());
+
+        // Bina yok olunca:
+        if (building.health <= 0 && building.active) {
+            building.active = false;
+            building.setVisible(false);
+
+            // Destroyed building sprite
+            let destroyed = this.add.image(building.x, building.y, 'destroyed_building')
+                .setOrigin(0.5,1)
+                .setDisplaySize(building.displayWidth, building.displayHeight);
+
+            // Duman/gif efektini biraz üstte göster
+            let smoke = this.add.image(building.x, building.y - building.displayHeight * 0.7, 'explosion')
+                .setScale(0.7);
+            this.time.delayedCall(1100, ()=>smoke.destroy());
+        }
+
         rocket.destroy();
 
-        // Bina tamamen yok olduysa
-        if (building.health <= 0) {
-            building.fillColor = 0x333333; // Gri olsun
-            // İstersen destroyed_building sprite ekle
-        }
-        // Game over (tüm binalar gitti mi)
+        // Game over: Tüm binalar yoksa
         if (this.buildingSprites.every(b=>b.health<=0)) {
             this.scene.start('GameOverScene', {score:this.score});
         }
     }
 }
 
-// --- Oyun Sonu ---
+// Game Over sahnesi örneği:
 class GameOverScene extends Phaser.Scene {
-    constructor() { super({ key: 'GameOverScene' }); }
-    init(data) { this.finalScore = data.score || 0; }
-    create() {
-        const w = this.cameras.main.width, h = this.cameras.main.height;
-        this.add.rectangle(w/2, h/2, w, h, 0x000000, 0.5);
-        this.add.text(w/2, h*0.4, "Game Over", { fontSize: "42px", fill: "#FFD700", align:"center" }).setOrigin(0.5);
-        this.add.text(w/2, h*0.5, "Score: "+this.finalScore, { fontSize: "30px", fill: "#fff" }).setOrigin(0.5);
-        // Yeniden başlat
-        this.input.once('pointerdown', ()=>this.scene.start('ChooseSideScene'));
+    constructor() {
+        super('GameOverScene');
+    }
+
+    create(data) {
+        const w = this.sys.game.config.width;
+        const h = this.sys.game.config.height;
+        this.add.text(w/2, h/2, 'GAME OVER\nScore: '+(data.score || 0), 
+            { fontSize: '38px', fill: '#f44', align:'center' }).setOrigin(0.5);
+        this.input.once('pointerdown', ()=>this.scene.start('GameScene'));
     }
 }
 
+// Phaser başlatma
 const config = {
     type: Phaser.AUTO,
-    width: window.innerWidth,
-    height: window.innerHeight,
-    scene: [Preloader, ChooseSideScene, LobbyScene, GameScene, GameOverScene],
-    physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
+    width: 400,
+    height: 650,
+    backgroundColor: '#111',
+    scene: [GameScene, GameOverScene],
+    physics: { default: 'arcade', arcade: { gravity: {y:0} } }
 };
-window.addEventListener('load', ()=>new Phaser.Game(config));
+const game = new Phaser.Game(config);
+
