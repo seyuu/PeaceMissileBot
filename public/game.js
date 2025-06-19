@@ -3,7 +3,14 @@ let selectedSide = null;
 let currentHighScore = 0;
 let leaderboardTopScore = 0;
 
-const firebaseConfig = { /* ... senin configin ... */ };
+const firebaseConfig = {
+  apiKey: "AIzaSyBtOkm8dpjVXlzAXCEB5sL_Awqq4HEeemc",
+  authDomain: "peacemissile-game.firebaseapp.com",
+  projectId: "peacemissile-game",
+  storageBucket: "peacemissile-game.firebasestorage.app",
+  messagingSenderId: "641906716058",
+  appId: "1:641906716058:web:1376e93994fab29f049e23"
+};
 
 // ------ Preloader Scene ------
 class Preloader extends Phaser.Scene {
