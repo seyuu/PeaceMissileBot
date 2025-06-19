@@ -175,10 +175,11 @@ class SideSelectScene extends Phaser.Scene {
 
 // --- Oyun Ana Sahnesi (Responsive rocket spawn, ekrana göre tam path) ---
 class GameScene extends Phaser.Scene {
-  constructor() { super('GameScene'); }
+  constructor() {super({ key: 'GameScene', physics: { arcade: { debug: true } } }); }
   init(data) { this.side = data.side || 'israel'; }
 
   create() {
+    console.log('Physics:', this.physics);
     console.log("Rocket var mı:", this.textures.exists('rocket'));
   let testSprite = this.add.sprite(100, 100, 'rocket').setScale(0.8);
   console.log("Test Sprite:", testSprite);
@@ -250,7 +251,8 @@ spawnRocket() {
     }
                 console.log('Rocket eklendi miiii', x, y);
 
-    let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
+  let rocket = this.physics.add.sprite(200, 200, 'rocket').setScale(0.8);
+console.log('Rocket:', rocket, 'Body:', rocket.body);
         console.log('Rocket eklendi', x, y, rocket);
     rocket.body.setVelocity(vx, vy);
         console.log('setVelocity eklendi', xv, yv, rocket);
@@ -387,7 +389,6 @@ function showSmoke(scene, x, y) {
 // --- Phaser Başlat ---
 const gameWidth = window.innerWidth;
 const gameHeight = window.innerHeight;
-
 const config = {
   type: Phaser.AUTO,
   parent: 'phaser-game',
@@ -398,4 +399,5 @@ const config = {
   physics: { default: "arcade", arcade: { gravity: { y: 0 } } },
   scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH }
 };
+
 const game = new Phaser.Game(config);
