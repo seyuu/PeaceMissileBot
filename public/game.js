@@ -82,6 +82,9 @@ class BootScene extends Phaser.Scene {
     this.load.image('coin_icon', 'assets/coin_icon.png');
     this.load.image('building_bar', 'assets/score.png');
     this.load.spritesheet('smoke_anim', 'assets/smoke_sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.on('complete', () => {
+    console.log('All assets loaded');
+  });
   }
   create() {
     this.anims.create({
@@ -176,6 +179,10 @@ class GameScene extends Phaser.Scene {
   init(data) { this.side = data.side || 'israel'; }
 
   create() {
+    console.log("Rocket var mı:", this.textures.exists('rocket'));
+  let testSprite = this.add.sprite(100, 100, 'rocket').setScale(0.8);
+  console.log("Test Sprite:", testSprite);
+
     const vars = getScaleVars(this);
 
     // Responsive buildingCoords -- İLK BAŞTA!
@@ -244,6 +251,7 @@ spawnRocket() {
 
     let rocket = this.physics.add.sprite(x, y, 'rocket').setScale(0.8).setInteractive();
         console.log('Rocket eklendi', x, y, rocket);
+                console.log('Rocket eklendi miiii', xv, yv, rocket);
     rocket.body.setVelocity(vx, vy);
         console.log('setVelocity eklendi', xv, yv, rocket);
     rocket.targetIdx = targetIdx;
