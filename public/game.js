@@ -377,40 +377,12 @@ class GameOverScene extends Phaser.Scene {
         this.add.text(this.cameras.main.centerX, 200, "Game Over!", { font: '36px monospace', color: "#fff" }).setOrigin(0.5);
         this.add.text(this.cameras.main.centerX, 250, `Score: ${data.score}`, { font: '28px monospace', color: "#ffd" }).setOrigin(0.5);
 
-         // Skor hesaplamaları:
-        let prevMax = userStats.score || 0;
-        let prevTotal = userStats.total_score || 0;
-        let prevCoins = userStats.total_pmno_coins || 0;
-        let newTotal = prevTotal + data.score;
-
-        // 1. Oyuncu eski rekorunu kırdı mı?
-        let brokePersonalRecord = data.score > prevMax;
-        // 2. Liderlik tablosundaki en yüksek skor (sadece ilk oyuncu varsa)
-        let leaderboardSnap = await fetchLeaderboard();
-        let leaderboardMax = leaderboardSnap[0]?.score || 0;
-        let brokeLeaderboardRecord = data.score > leaderboardMax;
-
-        // Hesaplamalar
-        if (brokePersonalRecord) {
-            userStats.score = data.score;
-            newTotal += data.score * 100;
-        }
-        if (brokeLeaderboardRecord) {
-            newTotal += data.score * 250;
-        }
-
-        userStats.total_score = newTotal;
-        userStats.total_pmno_coins = newTotal * 10;
         if (this.smokeSprites) {
             this.smokeSprites.forEach(s => s.destroy());
             this.smokeSprites = [];
         }
         // Güncellenmiş skorları Telegram bot.py'ye yolla
-        sendScoreToBot({
-        score: userStats.score,
-        total_score: userStats.total_score,
-        total_pmno_coins: userStats.total_pmno_coins
-    });
+        sendScoreToBot(data.score);
        
 
         const retryBtn = this.add.text(this.cameras.main.centerX, 340, "Play Again", { font: '24px monospace', color: "#1df", backgroundColor: "#133" })
@@ -468,13 +440,13 @@ class LeaderboardScene extends Phaser.Scene {
 }
 
 function showSmoke(scene, x, y) {
-   let smoke = scene.add.image(x, y, 'destroyed_building').setScale(0.3).setAlpha(0.93);
+   let smoke = scene.add.image(x, y, 'destroyed_building').setScale(0.17).setAlpha(0.93);
     scene.tweens.add({
         targets: smoke,
-        y: y - 90,
-        scale: 0.8,
+        y: y - 25,
+        scale: 0.23,
         alpha: 0,
-        duration: 2700,
+        duration: 1700,
         onComplete: () => smoke.destroy()
     });
 }
@@ -496,18 +468,14 @@ const config = {
 const game = new Phaser.Game(config);
 
 // Skor göndermek için:
-function sendScoreToBot(scoreData) {
-    console.log("sendScoreToBot", scoreData);
+function sendScoreToBot(score) {
     if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.sendData(
             JSON.stringify({
-                        type: 'score_update',
-                        user_id: window.Telegram.WebApp.initDataUnsafe.user.id,
-                        score: scoreData.score,
-                        total_score: scoreData.total_score,
-                        total_pmno_coins: scoreData.total_pmno_coins
+                type: 'score_update',
+                user_id: window.Telegram.WebApp.initDataUnsafe.user.id, // Telegramdan gelen user id
+                score: score // Sadece bu!
             })
         );
     }
 }
- 
