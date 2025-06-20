@@ -477,5 +477,7 @@ function sendScoreToBot(score) {
                 score: score // Sadece bu!
             })
         );
+        console.log("GÖNDERİLEN SKOR VERİSİ:", data); // Kontrol için!
+        window.Telegram.WebApp.sendData(JSON.stringify(data));
     }
 }
