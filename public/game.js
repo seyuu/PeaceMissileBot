@@ -97,12 +97,11 @@ class LobbyScene extends Phaser.Scene {
 
     // BG tam ekran
     this.add.image(vars.w/2, vars.h/2, 'lobby_bg').setDisplaySize(vars.w, vars.h);
-    // Logo (Üstte)
-    this.add.image(vars.w/2, 70, 'logo').setScale(0.21);
+    
 
     // Score & Coin ikonları (sağ üstte örnek)
-    this.add.image(vars.w - 50, 45, 'score_icon').setScale(0.6);
-    this.add.image(vars.w - 50, 90, 'coin_icon').setScale(0.6);
+    this.add.image(vars.w - 50, 45, 'score_icon').setScale(1.6);
+    //this.add.image(vars.w - 50, 90, 'coin_icon').setScale(0.6);
     await fetchUserStats();
 
     // SAĞ ÜST panel, PEACE'in üstünü kapatmaz!
@@ -143,7 +142,7 @@ class LobbyScene extends Phaser.Scene {
       .setInteractive().on('pointerup', () => this.scene.start('HowToPlayScene'));
 
     // En altta BÜYÜK logo
-    this.add.image(vars.w/2, vars.h - 95, 'logo').setScale(vars.logoScale);
+    this.add.image(vars.w/2, vars.h - 95, 'logo').setScale(vars.logoScale/2);
   }
 }
 
@@ -199,7 +198,7 @@ class BootScene extends Phaser.Scene {
         this.load.image('button', assets.button);
         this.load.image('building_bar', assets.building_bar);
         this.load.spritesheet('explosion', assets.explosion, { frameWidth: 64, frameHeight: 64 });
-        this.load.spritesheet('smoke', assets.smoke, { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('smoke', assets.smoke, { frameWidth: 128, frameHeight: 128});
     }
     create() {
         this.scene.start('LobbyScene');
@@ -244,12 +243,7 @@ class GameScene extends Phaser.Scene {
             callbackScope: this,
             loop: true
         });
-        this.anims.create({
-            key: 'smoke_play',
-            frames: this.anims.generateFrameNumbers('smoke', { start: 0, end: 5 }), // Kaç frame varsa ona göre
-            frameRate: 10,
-            repeat: 0
-        });
+        
         // Oyun bitimi
         this.gameOver = false;
     }
@@ -407,7 +401,10 @@ class GameOverScene extends Phaser.Scene {
 
         userStats.total_score = newTotal;
         userStats.total_pmno_coins = newTotal * 10;
-
+        if (this.smokeSprites) {
+            this.smokeSprites.forEach(s => s.destroy());
+            this.smokeSprites = [];
+        }
         // Güncellenmiş skorları Telegram bot.py'ye yolla
         sendScoreToBot({
         score: data.score,
@@ -428,18 +425,18 @@ class HowToPlayScene extends Phaser.Scene {
   create() {
     const vars = getScaleVars(this);
     this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.96);
-    this.add.text(vars.w/2, vars.h*0.1, "Oyunun amacını ve kurallarını açıklar.", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
+    this.add.text(vars.w/2, vars.h*0.1, "Amaç ve Kuralar", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
     let msg = "🕊️ **Barış Füzesi Botuna Hoş Geldiniz!** 🕊️\n\n"+
-        "Bu oyunda amacınız, gökyüzündeki füzeleri barış güvercinlerine dönüştürerek "+
-        "dünyaya barış getirmek. Her başarılı dönüşüm size puan kazandırır.\n\n"+
+        "Bu oyunda amacınız, gökyüzündeki füzeleri \n\n"+"barış güvercinlerine dönüştürerek \n\n"+
+        "dünyaya barış getirmek.\n\n"+"Her başarılı dönüşüm size puan kazandırır.\n\n"+
         "💰 **PMNOFO Coini Nasıl Kazanılır?**\n"+
-        "Her oynadığınız oyunda kazandığınız puan kadar PMNOFO Coini hesabınıza eklenir. "+
-        "Ayrıca, eğer yeni bir kişisel rekor kırarsanız, kırdığınız rekor puanının "+
-        "**100 katı** kadar devasa bir bonus PMNOFO Coini kazanırsınız! Unutmayın, rekorlar kırın, daha çok coin toplayın!\n\n"+
+        "Her oynadığınız oyunda kazandığınız puan kadar\n\n"+"PMNOFO Coini hesabınıza eklenir. \n\n"+
+        "Ayrıca, eğer yeni bir kişisel rekor kırarsanız, \n\n"+"kırdığınız rekor puanının "+
+        "**100 katı** kadar devasa bir bonus PMNOFO Coini kazanırsınız!\n\n"+"Unutmayın, rekorlar kırın, daha çok coin toplayın!\n\n"+
         "📊 **Genel Liderlik Tablosu**\n"+
-        "En yüksek toplam puana veya en çok PMNOFO Coini'ne sahip oyuncuları görmek için "+
-        "`/leaderboard` komutunu kullanın. Adınızı zirveye taşıyın!\n\n"+
-        "📢 **Unutmayın:** Her bir puanınız, dünyaya bir adım daha fazla barış getirme çabanızı temsil ediyor. "+
+        "En yüksek toplam puana veya \n\n"+"en çok PMNOFO Coini'ne \n\n"+"sahip oyuncuları görmek için \n\n"+
+        "`/leaderboard` komutunu kullanın. \n\n"+"Adınızı zirveye taşıyın!\n\n"+
+        "📢 **Unutmayın:** \n\n"+"Her bir puanınız, dünyaya bir adım \n\n"+"daha fazla barış getirme çabanızı temsil ediyor. \n\n"+
         "Haydi, göreve başlayın!";
     this.add.text(vars.w/2, vars.h*0.17, msg, { font: `${vars.fontSmall+3}px monospace`, fill: "#fff", align: "center" }).setOrigin(0.5,0);
     this.add.text(vars.w/2, vars.h - 80, "< Back", { font: `${vars.fontMid}px monospace`, fill: "#67f" })
@@ -471,9 +468,15 @@ class LeaderboardScene extends Phaser.Scene {
 }
 
 function showSmoke(scene, x, y) {
-   let smoke = scene.add.sprite(x, y, 'smoke').setScale(1.1).setAlpha(0.85);
-    smoke.play('smoke_play');
-    smoke.on('animationcomplete', () => smoke.destroy());
+   let smoke = scene.add.image(x, y, 'destroyed_building').setScale(1.2).setAlpha(0.93);
+    scene.tweens.add({
+        targets: smoke,
+        y: y - 90,
+        scale: 1.8,
+        alpha: 0,
+        duration: 2700,
+        onComplete: () => smoke.destroy()
+    });
 }
 
 // --- Phaser Başlat ---
