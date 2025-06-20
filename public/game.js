@@ -167,10 +167,6 @@ function getScaleVars(scene) {
 // --- Taraf Seçim ---
 class SideSelectScene extends Phaser.Scene {
     constructor() { super({ key: 'SideSelectScene' }); }
-    preload() {
-        this.load.image('iran_bg', assets.iran_bg);
-        this.load.image('israel_bg', assets.israel_bg);
-    }
     create() {
         this.cameras.main.setBackgroundColor("#000");
         this.add.text(this.cameras.main.centerX, 120, "Choose your side", { font: '32px monospace', color: "#fff" }).setOrigin(0.5);
@@ -188,24 +184,32 @@ class SideSelectScene extends Phaser.Scene {
     }
 }
 
-// --- Oyun ---
-class GameScene extends Phaser.Scene {
-    constructor() { super({ key: 'GameScene' }); }
+class BootScene extends Phaser.Scene {
+    constructor() { super('BootScene'); }
     preload() {
         this.load.image('iran_bg', assets.iran_bg);
         this.load.image('israel_bg', assets.israel_bg);
+        this.load.image('lobby_bg', assets.lobby_bg);
+        this.load.image('logo', assets.logo);
+        this.load.image('destroyed_building', assets.destroyed_building);
         this.load.image('rocket', assets.rocket);
         this.load.image('dove', assets.dove);
-        this.load.image('destroyed_building', assets.destroyed_building);
-        this.load.image('coin', assets.coin);
+        this.load.image('coin_icon', assets.coin);
         this.load.image('score_icon', assets.score_icon);
-        this.load.spritesheet('explosion', assets.explosion, { frameWidth: 64, frameHeight: 64 });
-        this.load.image('logo', assets.logo);
         this.load.image('button', assets.button);
-        this.load.image('lobby_bg', assets.lobby_bg);
         this.load.image('building_bar', assets.building_bar);
-        this.load.spritesheet('smoke', assets.smoke, { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('explosion', assets.explosion, { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('smoke_anim', assets.smoke, { frameWidth: 64, frameHeight: 64 });
     }
+    create() {
+        this.scene.start('LobbyScene');
+    }
+}
+
+
+// --- Oyun ---
+class GameScene extends Phaser.Scene {
+    constructor() { super({ key: 'GameScene' }); }
     create(data) {
         // Arka plan
         let side = data.side || "israel";
@@ -280,7 +284,7 @@ class GameScene extends Phaser.Scene {
         bomb.vx = vx / 1000;
         bomb.vy = vy / 1000;
         this.bombs.push(bomb);
-        bomb.rotation = Math.atan2(bomb.vy, bomb.vx) + Math.PI/2;bomb.rotation = Math.atan2(bomb.vy, bomb.vx) + Math.PI/2;
+        bomb.rotation = Math.atan2(bomb.vy, bomb.vx) + Math.PI/2;
         // Bombaya tıklandığında
         bomb.on('pointerdown', () => {
             this.bombExplode(bomb, false);
@@ -420,17 +424,17 @@ class HowToPlayScene extends Phaser.Scene {
     const vars = getScaleVars(this);
     this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.96);
     this.add.text(vars.w/2, vars.h*0.1, "Oyunun amacını ve kurallarını açıklar.", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
-    let msg = "🕊️ **Barış Füzesi Botuna Hoş Geldiniz!** 🕊️\n\n"
-        "Bu oyunda amacınız, gökyüzündeki füzeleri barış güvercinlerine dönüştürerek "
-        "dünyaya barış getirmek. Her başarılı dönüşüm size puan kazandırır.\n\n"
-        "💰 **PMNOFO Coini Nasıl Kazanılır?**\n"
-        "Her oynadığınız oyunda kazandığınız puan kadar PMNOFO Coini hesabınıza eklenir. "
-        "Ayrıca, eğer yeni bir kişisel rekor kırarsanız, kırdığınız rekor puanının "
-        "**100 katı** kadar devasa bir bonus PMNOFO Coini kazanırsınız! Unutmayın, rekorlar kırın, daha çok coin toplayın!\n\n"
-        "📊 **Genel Liderlik Tablosu**\n"
-        "En yüksek toplam puana veya en çok PMNOFO Coini'ne sahip oyuncuları görmek için "
-        "`/leaderboard` komutunu kullanın. Adınızı zirveye taşıyın!\n\n"
-        "📢 **Unutmayın:** Her bir puanınız, dünyaya bir adım daha fazla barış getirme çabanızı temsil ediyor. "
+    let msg = "🕊️ **Barış Füzesi Botuna Hoş Geldiniz!** 🕊️\n\n"+
+        "Bu oyunda amacınız, gökyüzündeki füzeleri barış güvercinlerine dönüştürerek "+
+        "dünyaya barış getirmek. Her başarılı dönüşüm size puan kazandırır.\n\n"+
+        "💰 **PMNOFO Coini Nasıl Kazanılır?**\n"+
+        "Her oynadığınız oyunda kazandığınız puan kadar PMNOFO Coini hesabınıza eklenir. "+
+        "Ayrıca, eğer yeni bir kişisel rekor kırarsanız, kırdığınız rekor puanının "+
+        "**100 katı** kadar devasa bir bonus PMNOFO Coini kazanırsınız! Unutmayın, rekorlar kırın, daha çok coin toplayın!\n\n"+
+        "📊 **Genel Liderlik Tablosu**\n"+
+        "En yüksek toplam puana veya en çok PMNOFO Coini'ne sahip oyuncuları görmek için "+
+        "`/leaderboard` komutunu kullanın. Adınızı zirveye taşıyın!\n\n"+
+        "📢 **Unutmayın:** Her bir puanınız, dünyaya bir adım daha fazla barış getirme çabanızı temsil ediyor. "+
         "Haydi, göreve başlayın!";
     this.add.text(vars.w/2, vars.h*0.17, msg, { font: `${vars.fontSmall+3}px monospace`, fill: "#fff", align: "center" }).setOrigin(0.5,0);
     this.add.text(vars.w/2, vars.h - 80, "< Back", { font: `${vars.fontMid}px monospace`, fill: "#67f" })
@@ -476,7 +480,7 @@ const config = {
     width: gameWidth,
     height: gameHeight,
     backgroundColor: "#000",
-    scene: [LobbyScene, SideSelectScene, GameScene, GameOverScene, HowToPlayScene, LeaderboardScene],
+    scene: [BootScene, LobbyScene, SideSelectScene, GameScene, GameOverScene, HowToPlayScene, LeaderboardScene],
     physics: { default: "arcade", arcade: { gravity: { y: 0 } } },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
 };
@@ -484,7 +488,7 @@ const config = {
 const game = new Phaser.Game(config);
 
 // Skor göndermek için:
-function sendScoreToBot(currentScore) {
+function sendScoreToBot(scoreData) {
     if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.sendData(
             JSON.stringify({
