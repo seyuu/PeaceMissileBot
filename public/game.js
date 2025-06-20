@@ -199,7 +199,7 @@ class BootScene extends Phaser.Scene {
         this.load.image('button', assets.button);
         this.load.image('building_bar', assets.building_bar);
         this.load.spritesheet('explosion', assets.explosion, { frameWidth: 64, frameHeight: 64 });
-        this.load.spritesheet('smoke_anim', assets.smoke, { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('smoke', assets.smoke, { frameWidth: 64, frameHeight: 64 });
     }
     create() {
         this.scene.start('LobbyScene');
@@ -244,7 +244,12 @@ class GameScene extends Phaser.Scene {
             callbackScope: this,
             loop: true
         });
-
+        this.anims.create({
+            key: 'smoke_play',
+            frames: this.anims.generateFrameNumbers('smoke', { start: 0, end: 5 }), // Kaç frame varsa ona göre
+            frameRate: 10,
+            repeat: 0
+        });
         // Oyun bitimi
         this.gameOver = false;
     }
@@ -466,7 +471,7 @@ class LeaderboardScene extends Phaser.Scene {
 }
 
 function showSmoke(scene, x, y) {
-   let smoke = scene.add.sprite(x, y, 'smoke_anim').setScale(1.1).setAlpha(0.85);
+   let smoke = scene.add.sprite(x, y, 'smoke').setScale(1.1).setAlpha(0.85);
     smoke.play('smoke_play');
     smoke.on('animationcomplete', () => smoke.destroy());
 }
