@@ -382,6 +382,8 @@ class GameOverScene extends Phaser.Scene {
             this.smokeSprites = [];
         }
         // Güncellenmiş skorları Telegram bot.py'ye yolla
+        console.log("Skor gönderiliyor:", data.score);
+
         sendScoreToBot(data.score);
        
 
@@ -451,6 +453,20 @@ function showSmoke(scene, x, y) {
     });
 }
 
+
+function sendScoreToBot(score) {
+    if (window.Telegram && window.Telegram.WebApp) {
+        window.Telegram.WebApp.sendData(
+            JSON.stringify({
+                type: 'score_update',
+                user_id: window.Telegram.WebApp.initDataUnsafe.user.id,
+                score: score
+            })
+        );
+    }
+}
+
+
 // --- Phaser Başlat ---
 const gameWidth = window.innerWidth;
 const gameHeight = window.innerHeight;
@@ -466,18 +482,3 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
-
-// Skor göndermek için:
-function sendScoreToBot(score) {
-    if (window.Telegram && window.Telegram.WebApp) {
-        window.Telegram.WebApp.sendData(
-            JSON.stringify({
-                type: 'score_update',
-                user_id: window.Telegram.WebApp.initDataUnsafe.user.id, // Telegramdan gelen user id
-                score: score // Sadece bu!
-            })
-        );
-        console.log("GÖNDERİLEN SKOR VERİSİ:", data); // Kontrol için!
-        window.Telegram.WebApp.sendData(JSON.stringify(data));
-    }
-}
