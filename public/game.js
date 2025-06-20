@@ -407,7 +407,7 @@ class GameOverScene extends Phaser.Scene {
         }
         // Güncellenmiş skorları Telegram bot.py'ye yolla
         sendScoreToBot({
-        score: data.score,
+        score: userStats.score,
         total_score: userStats.total_score,
         total_pmno_coins: userStats.total_pmno_coins
     });
@@ -468,11 +468,11 @@ class LeaderboardScene extends Phaser.Scene {
 }
 
 function showSmoke(scene, x, y) {
-   let smoke = scene.add.image(x, y, 'destroyed_building').setScale(1.2).setAlpha(0.93);
+   let smoke = scene.add.image(x, y, 'destroyed_building').setScale(0.3).setAlpha(0.93);
     scene.tweens.add({
         targets: smoke,
         y: y - 90,
-        scale: 1.8,
+        scale: 0.8,
         alpha: 0,
         duration: 2700,
         onComplete: () => smoke.destroy()
@@ -497,6 +497,7 @@ const game = new Phaser.Game(config);
 
 // Skor göndermek için:
 function sendScoreToBot(scoreData) {
+    console.log("sendScoreToBot", scoreData);
     if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.sendData(
             JSON.stringify({
