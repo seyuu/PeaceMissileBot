@@ -1,3 +1,17 @@
+// --- TELEGRAM MINI APPS ANALYTICS SDK ENTEGRASYONU ---
+(function () {
+  var s = document.createElement('script');
+  s.src = "https://cdn.jsdelivr.net/npm/@tma.js/analytics@latest";
+  s.onload = function() {
+    tma.analytics.init({
+      botUsername: 'PMNOFOGameBot', 
+      accessToken: 'eyJhcHBfbmFtZSI6IlBlYWNlTWlzc2lsZUdhbWUiLCJhcHBfdXJsIjoiaHR0cHM6Ly90Lm1lL1BNTk9GT0dhbWVCb3QiLCJhcHBfZG9tYWluIjoiaHR0cHM6Ly9wZWFjZW1pc3NpbGUtZ2FtZS11aS5vbnJlbmRlci5jb20vIn0=!ZMoot1peRfJVWVWuIjRF8B22OYVWYJgNHqLT6TlOrc8=' 
+    });
+    tma.analytics.send('app_open');
+  };
+  document.head.appendChild(s);
+})();
+
 // --- Telegram & Firestore Setup (skor yazımı sadece bot.py ile olacak, burada sadece gösterim var) ---
 let tg = window.Telegram && window.Telegram.WebApp;
 let currentUser = tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
