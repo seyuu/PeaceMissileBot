@@ -456,7 +456,7 @@ function showSmoke(scene, x, y) {
 
 function sendScoreToBot(score) {
     const user = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.user;
-    fetch('https://peace-missile-score.onrender.com/save_score', {
+    fetch('https://peacemissilebot.onrender.com/save_score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -466,6 +466,7 @@ function sendScoreToBot(score) {
       })
     })
 }
+
 
 
 
