@@ -470,7 +470,6 @@ function sendScoreToBot(score) {
 
 
 
-
 // --- Phaser Başlat ---
 const gameWidth = window.innerWidth;
 const gameHeight = window.innerHeight;
