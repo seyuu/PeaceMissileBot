@@ -455,15 +455,16 @@ function showSmoke(scene, x, y) {
 
 
 function sendScoreToBot(score) {
-    if (window.Telegram && window.Telegram.WebApp) {
-        window.Telegram.WebApp.sendData(
-            JSON.stringify({
-                type: 'score_update',
-                user_id: window.Telegram.WebApp.initDataUnsafe.user.id,
-                score: score
-            })
-        );
-    }
+    const user = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.user;
+    fetch("https://peacemissile-score-api.herokuapp.com/save_score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            user_id: user && user.id,
+            username: user && user.username,
+            score: score
+        })
+    });
 }
 
 
