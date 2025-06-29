@@ -456,7 +456,7 @@ function showSmoke(scene, x, y) {
 
 function sendScoreToBot(score) {
     const user = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.user;
-    fetch('bot-4pgi.onrender.com/save_score', {
+    fetch('https://bot-4pgi.onrender.com/save_score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
