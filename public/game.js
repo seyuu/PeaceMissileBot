@@ -47,6 +47,30 @@ async function fetchLeaderboard() {
   return snap.docs.map(doc => doc.data());
 }
 
+const MEME_MESSAGES = [
+  { 
+    text: "Dove: 'One more step for peace!'", 
+    img: "dove_peace" 
+  },
+  { 
+    text: "Peace Bro: 'Kid, you rock!'", 
+    img: "peace_bro" 
+  },
+  { 
+    text: "Missile turned into a dove. Classic!", 
+    img: "missile_to_dove"
+  },
+  { 
+    text: "Tweet tweet! Bombs out, peace in!", 
+    img: "twitter_bird" 
+  },
+  { 
+    text: "Everyone for peace!", 
+    img: "crowd_peace" 
+  }
+];
+
+
 // --- Oyun Ayarları ---
 const buildingData = {
     iran: [
@@ -89,9 +113,14 @@ const assets = {
     dove: 'assets/dove.png',
     coin: 'assets/coin_icon.png',
     score_icon: 'assets/score_icon.png',
-     button:'assets/play_button.png',
+    button:'assets/play_button.png',
     building_bar:'assets/score.png',
-      smoke: 'assets/smoke_sheet.png' 
+    smoke: 'assets/smoke_sheet.png',
+    dove_peace: 'assets/dove_peace.png',
+    peace_bro: 'assets/peace_bro.png',
+    missile_to_dove: 'assets/missile_to_dove.png',
+    twitter_bird: 'assets/twitter_bird.png',
+    crowd_peace: 'assets/crowd_peace.png',
 };
 
 // --- Global state ---
@@ -211,6 +240,12 @@ class BootScene extends Phaser.Scene {
         this.load.image('score_icon', assets.score_icon);
         this.load.image('button', assets.button);
         this.load.image('building_bar', assets.building_bar);
+        this.load.image('dove_peace', assets.dove_peace);
+        this.load.image('peace_bro', assets.peace_bro);
+        this.load.image('missile_to_dove', assets.missile_to_dove);
+        this.load.image('twitter_bird', assets.twitter_bird);
+        this.load.image('crowd_peace', assets.crowd_peace);
+
         this.load.spritesheet('explosion', assets.explosion, { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('smoke', assets.smoke, { frameWidth: 128, frameHeight: 128});
     }
@@ -548,23 +583,30 @@ class GameScene extends Phaser.Scene {
     }
 
     // --- Random meme veya Barış Abi mesajı (örnek) ---
-    showRandomMeme() {
-        let memes = [
-            "Güvercin: 'Barışa bir adım daha!'",
-            "Barış Abi: 'Evlat, harika gidiyorsun!'",
-            "Bir meme görseli ya da komik cümle burada çıkabilir.",
-            "Barış Tweet'i: Cik cik barış, roket yok savaş!"
-        ];
-        let memeText = Phaser.Utils.Array.GetRandom(memes);
-        let t = this.add.text(this.cameras.main.centerX, 120, memeText, {
-            font: "bold 22px monospace",
-            fill: "#fff",
-            backgroundColor: "#333",
-            align: "center",
-            padding: 10
-        }).setOrigin(0.5);
-        this.time.delayedCall(1900, () => t.destroy());
-    }
+showRandomMeme() {
+    const meme = Phaser.Utils.Array.GetRandom(MEME_MESSAGES);
+    const memeGroup = this.add.group();
+
+    // Meme görseli (daha küçük, üstte)
+    const memeImg = this.add.image(this.cameras.main.centerX, 90, 'meme_' + meme.img)
+        .setScale(0.45)
+        .setOrigin(0.5);
+    memeGroup.add(memeImg);
+
+    // Yazı: Görselin altına, max genişlik 260px, font küçük, arka plan hafif
+    const memeText = this.add.text(this.cameras.main.centerX, 145, meme.text, {
+        font: "18px monospace",
+        fill: "#fff",
+        backgroundColor: "#1a1a1ac9",
+        align: "center",
+        padding: { left: 8, right: 8, top: 2, bottom: 2 },
+        wordWrap: { width: 260, useAdvancedWrap: true }
+    }).setOrigin(0.5, 0);
+    memeGroup.add(memeText);
+
+    this.time.delayedCall(1700, () => memeGroup.clear(true, true));
+}
+
 }
 
 // --- GameOver Scene ---
