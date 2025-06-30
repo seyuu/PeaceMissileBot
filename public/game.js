@@ -174,17 +174,17 @@ class LobbyScene extends Phaser.Scene {
         const welcomeFontSize = smallFontSize + 2;
 
         this.add.text(statsX, statsY, `Welcome, ${userStats.username || 'Player'}!`, { font: `${welcomeFontSize}px monospace`, fill: "#fff", align: 'right' }).setOrigin(1, 0);
-        statsY += welcomeFontSize + 8;
+        statsY += welcomeFontSize + 12;
         this.add.text(statsX, statsY, `Max Score: ${userStats.score}`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
-        statsY += smallFontSize + 5;
+        statsY += smallFontSize + 9;
         this.add.text(statsX, statsY, `Total Score: ${userStats.total_score}`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
-        statsY += smallFontSize + 5;
+        statsY += smallFontSize + 9;
         this.add.text(statsX, statsY, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
 
         // --- 4. Merkezi Elemanlar ---
 
         // "Start Mission" Butonu
-        const startBtn = this.add.image(width / 2, height * 0.62, 'button')
+        const startBtn = this.add.image(width / 2, height * 0.58, 'button')
             .setInteractive({ cursor: 'pointer' });
         startBtn.setScale(width * 0.0015); // Buton boyutunu ayarla
         startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
