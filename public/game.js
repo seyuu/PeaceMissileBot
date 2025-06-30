@@ -228,10 +228,14 @@ class GameScene extends Phaser.Scene {
 
     create(data) {
         // --- Temel ayarlar ---
-        let side = data.side || "israel";
-        this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, side === "iran_bg" ? "iran_bg" : "israel_bg")
-            .setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-
+        console.log('GameScene data:', data);
+        let side = data && data.side ? data.side : "israel";
+        this.add.text(50, 50, `SIDE: ${side}`, { font: '24px monospace', color: "#fff" });
+        this.add.image(
+            this.cameras.main.centerX,
+            this.cameras.main.centerY,
+            side === "iran" ? "iran_bg" : "israel_bg"
+        ).setDisplaySize(this.cameras.main.width, this.cameras.main.height);
         // Binalar
         this.buildings = [];
         let bArr = buildingData[side];
