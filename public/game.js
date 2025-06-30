@@ -143,49 +143,51 @@ class LobbyScene extends Phaser.Scene {
     
 
     // Score & Coin ikonları (sağ üstte örnek)
-    this.add.image(vars.w - 50, 45, 'score_icon').setScale(1.6);
+     this.add.image(vars.w - vars.w * 0.07, vars.h * 0.07, 'score_icon').setScale(1.6);
     //this.add.image(vars.w - 50, 90, 'coin_icon').setScale(0.6);
     await fetchUserStats();
 
     // SAĞ ÜST panel, PEACE'in üstünü kapatmaz!
-    let panelX = vars.w - vars.topPanelW - vars.margin;
-    let y = vars.margin;
+     let panelX = vars.w - vars.topPanelW - vars.margin;
+    let y = vars.h * 0.045; // Ekran yüksekliğinin %4.5'i kadar aşağıdan başlar
     let statColor = "#ffe349";
-    this.add.text(panelX, y, `Welcome, ${userStats.username || 'Player'}!`, { font: `${vars.fontSmall+2}px monospace`, fill: "#fff" }).setOrigin(0,0);
-    y += vars.fontSmall + 8;
-    this.add.text(panelX, y, `Max Score: ${userStats.score}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
-    y += vars.fontSmall + 4;
-    this.add.text(panelX, y, `Total Score: ${userStats.total_score}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
-    y += vars.fontSmall + 4;
-    this.add.text(panelX, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0,0);
+    this.add.text(panelX, y, `Welcome, ${userStats.username || 'Player'}!`, { font: `${vars.fontSmall + 2}px monospace`, fill: "#fff" }).setOrigin(0, 0);
+    y += vars.fontSmall + vars.h * 0.013; // fontSmall + %1.3 yükseklik
+    this.add.text(panelX, y, `Max Score: ${userStats.score}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0, 0);
+    y += vars.fontSmall + vars.h * 0.006;
+    this.add.text(panelX, y, `Total Score: ${userStats.total_score}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0, 0);
+    y += vars.fontSmall + vars.h * 0.006;
+    this.add.text(panelX, y, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: `${vars.fontSmall}px monospace`, fill: statColor }).setOrigin(0, 0);
+
 
     // Start Mission butonu: ALTTA, ortada (hiçbir yazı üstüne binmez)
     let btnY = vars.h * 0.60;
     let startBtn = this.add.image(vars.w/2, btnY, 'button')
       .setScale(vars.btnScale).setInteractive();
-    let btnLabel = this.add.text(vars.w, btnY, "", { font: `${vars.fontBig}px monospace`, fill: "#13f7f7" }).setOrigin(0.3);
+    let btnLabel = this.add.text(vars.w, btnY, "", { font: `${vars.fontBig}px monospace`, fill: "#13f7f7" }).setOrigin(0.5);
     startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
 
     // Top Players — butonun üstünde, ortada
-    let lbY = btnY - 300;
-    this.add.text(vars.w/2, lbY, "Top Players", { font: `bold ${vars.fontMid+2}px monospace`, fill: "#ffe349" }).setOrigin(0.5, 0);
+    let lbY = btnY - vars.h * 0.18; // Start butonundan ekranın %18'i yukarıda
+    this.add.text(vars.w / 2, lbY, "Top Players", { font: `bold ${vars.fontMid + 2}px monospace`, fill: "#ffe349" }).setOrigin(0.5, 0);
+
     const leaders = (await fetchLeaderboard()).slice(0, 5);
-    lbY += vars.fontMid + 8;
+    lbY += vars.fontMid + vars.h * 0.01;
     leaders.forEach((u, i) => {
-      this.add.text(vars.w/2, lbY + i * (vars.fontSmall + 8), `${i + 1}. ${u.username || 'Anon'} - ${u.total_score} pts`, { font: `${vars.fontSmall+2}px monospace`, fill: "#fff" }).setOrigin(0.5, 0);
+      this.add.text(vars.w / 2, lbY + i * (vars.fontSmall + vars.h * 0.012), `${i + 1}. ${u.username || 'Anon'} - ${u.total_score} pts`, { font: `${vars.fontSmall + 2}px monospace`, fill: "#fff" }).setOrigin(0.5, 0);
     });
 
     // Menü: Leaderboard & How to Play (aşağıda iki yana)
-    let menuY = btnY + startBtn.displayHeight/2 + 28;
-    this.add.text(vars.w/4, menuY, "Leaderboard", { font: `${vars.fontMid}px monospace`, fill: "#ffe349" })
-      .setOrigin(0.5,0)
+     let menuY = btnY + startBtn.displayHeight / 2 + vars.h * 0.025;
+    this.add.text(vars.w / 4, menuY, "Leaderboard", { font: `${vars.fontMid}px monospace`, fill: "#ffe349" })
+      .setOrigin(0.5, 0)
       .setInteractive().on('pointerup', () => this.scene.start('LeaderboardScene'));
-    this.add.text(vars.w - vars.w/4, menuY, "How to Play?", { font: `${vars.fontMid}px monospace`, fill: "#43c0f7" })
+    this.add.text(vars.w - vars.w / 4, menuY, "How to Play?", { font: `${vars.fontMid}px monospace`, fill: "#43c0f7" })
       .setOrigin(0.5, 0)
       .setInteractive().on('pointerup', () => this.scene.start('HowToPlayScene'));
 
     // En altta BÜYÜK logo
-    this.add.image(vars.w/2, vars.h - 95, 'logo').setScale(vars.logoScale/2);
+     this.add.image(vars.w / 2, vars.h - vars.h * 0.11, 'logo').setScale(vars.logoScale / 2);
   }
 }
 
