@@ -588,7 +588,7 @@ showRandomMeme() {
   const cx = this.cameras.main.centerX;
   // Görseli biraz daha büyük koyduk
   const img = this.add.image(cx, 60, meme.img)
-    .setScale(0.4)        // eskiden 0.25 idi
+    .setScale(0.6)        // eskiden 0.25 idi
     .setOrigin(0.5, 0);
 
   const txt = this.add.text(
