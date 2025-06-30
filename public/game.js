@@ -584,27 +584,40 @@ class GameScene extends Phaser.Scene {
 
     // --- Random meme veya Barış Abi mesajı (örnek) ---
 showRandomMeme() {
-    const meme = Phaser.Utils.Array.GetRandom(MEME_MESSAGES);
-    const memeGroup = this.add.group();
+  const meme = Phaser.Utils.Array.GetRandom(MEME_MESSAGES);
+  const group = this.add.group();
 
-    // Meme görseli (daha küçük, üstte)
-    const W = this.cameras.main.width;
-    const memeImg =  this.add.image(W/2, 60, meme.img)
-    .setScale(0.25)
-    .setOrigin(0.5, 0);
+  // 1) Görseli ekleyip gruba al
+  const img = this.add.image(
+    this.cameras.main.centerX,
+    60,
+    meme.img     // örn. 'dove_peace'
+  )
+  .setScale(0.25)
+  .setOrigin(0.5, 0);
+  group.add(img);
 
-    // Yazı: Görselin altına, max genişlik 260px, font küçük, arka plan hafif
-    const memeText = this.add.text(this.cameras.main.centerX, 145, meme.text, {
-        font: "18px monospace",
-        fill: "#fff",
-        backgroundColor: "#1a1a1ac9",
-        align: "center",
-        padding: { left: 8, right: 8, top: 2, bottom: 2 },
-        wordWrap: { width: 260, useAdvancedWrap: true }
-    }).setOrigin(0.5, 0);
-    memeGroup.add(memeText);
+  // 2) Yazıyı ekleyip gruba al
+  const txt = this.add.text(
+    this.cameras.main.centerX,
+    img.y + img.displayHeight + 8,
+    meme.text,
+    {
+      font: "18px monospace",
+      fill: "#fff",
+      backgroundColor: "#1a1a1ac9",
+      align: "center",
+      padding: { left: 8, right: 8, top: 2, bottom: 2 },
+      wordWrap: { width: 260 }
+    }
+  )
+  .setOrigin(0.5, 0);
+  group.add(txt);
 
-    this.time.delayedCall(1700, () => memeGroup.clear(true, true));
+  // 1.7 saniye sonra hem görseli hem yazıyı temizle
+  this.time.delayedCall(1700, () => {
+    group.clear(true, true);
+  });
 }
 
 }
