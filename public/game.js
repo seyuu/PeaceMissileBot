@@ -585,21 +585,14 @@ class GameScene extends Phaser.Scene {
     // --- Random meme veya Barış Abi mesajı (örnek) ---
 showRandomMeme() {
   const meme = Phaser.Utils.Array.GetRandom(MEME_MESSAGES);
-  const group = this.add.group();
+  const cx = this.cameras.main.centerX;
+  // Görseli biraz daha büyük koyduk
+  const img = this.add.image(cx, 60, meme.img)
+    .setScale(0.4)        // eskiden 0.25 idi
+    .setOrigin(0.5, 0);
 
-  // 1) Görseli ekleyip gruba al
-  const img = this.add.image(
-    this.cameras.main.centerX,
-    60,
-    meme.img     // örn. 'dove_peace'
-  )
-  .setScale(0.25)
-  .setOrigin(0.5, 0);
-  group.add(img);
-
-  // 2) Yazıyı ekleyip gruba al
   const txt = this.add.text(
-    this.cameras.main.centerX,
+    cx,
     img.y + img.displayHeight + 8,
     meme.text,
     {
@@ -610,15 +603,15 @@ showRandomMeme() {
       padding: { left: 8, right: 8, top: 2, bottom: 2 },
       wordWrap: { width: 260 }
     }
-  )
-  .setOrigin(0.5, 0);
-  group.add(txt);
+  ).setOrigin(0.5, 0);
 
-  // 1.7 saniye sonra hem görseli hem yazıyı temizle
+  // 1.7 saniye sonra kesin silinsin
   this.time.delayedCall(1700, () => {
-    group.clear(true, true);
+    img.destroy();
+    txt.destroy();
   });
 }
+
 
 }
 
