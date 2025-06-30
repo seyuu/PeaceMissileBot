@@ -263,7 +263,6 @@ class GameScene extends Phaser.Scene {
 
     create(data) {
         // --- Temel ayarlar ---
-        console.log('GameScene data:', data);
         let side = data && data.side ? data.side : "israel";
         this.add.text(50, 50, `SIDE: ${side}`, { font: '24px monospace', color: "#fff" });
         this.add.image(
@@ -294,7 +293,7 @@ class GameScene extends Phaser.Scene {
         this.bombSpawnDelay = 1100;
         this.bombSpeedMultiplier = 1;
         this.doubleScoreActive = false;
-
+        this.nextMemeAt = Phaser.Math.Between(8, 12); // İlk meme için başlangıç
         // Zorluk seviyeleri
         this.difficultyLevels = [
             { count: 0,   delay: 1100, speed: 1.00 },
@@ -543,10 +542,12 @@ class GameScene extends Phaser.Scene {
 
             this.onRocketConverted();
 
-            // Meme çıkart
-            if (this.rocketCount > 0 && this.rocketCount % 15 === 0) {
+            if (this.rocketCount >= this.nextMemeAt) {
                 this.showRandomMeme();
+                // bir dahaki sefer için yeni aralık:
+                this.nextMemeAt = this.rocketCount + Phaser.Math.Between(8, 12);
             }
+            
         }
 
         if (isHitBuilding && bomb.target) {
@@ -588,7 +589,7 @@ showRandomMeme() {
   const cx = this.cameras.main.centerX;
   // Görseli biraz daha büyük koyduk
   const img = this.add.image(cx, 60, meme.img)
-    .setScale(0.6)        // eskiden 0.25 idi
+    .setScale(0.7)        // eskiden 0.25 idi
     .setOrigin(0.5, 0);
 
   const txt = this.add.text(
@@ -606,7 +607,7 @@ showRandomMeme() {
   ).setOrigin(0.5, 0);
 
   // 1.7 saniye sonra kesin silinsin
-  this.time.delayedCall(1700, () => {
+  this.time.delayedCall(2300, () => {
     img.destroy();
     txt.destroy();
   });
