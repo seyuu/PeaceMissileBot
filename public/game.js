@@ -281,7 +281,7 @@ class GameScene extends Phaser.Scene {
         }
         this.hourlyPlayCount = parseInt(localStorage.getItem("hourlyPlayCount") || "0");
         this.lastPlayHour = parseInt(localStorage.getItem("lastPlayHour") || "0");
-        this.captchaPassed = false;
+
 
         // Saatlik limit kontrolü
         let nowHour = new Date().getHours();
@@ -375,10 +375,7 @@ class GameScene extends Phaser.Scene {
                 // Saatlik limit ve captcha kontrolü
                 this.hourlyPlayCount += 1;
                 localStorage.setItem("hourlyPlayCount", this.hourlyPlayCount.toString());
-                if (this.hourlyPlayCount > 15 && !this.captchaPassed) {
-                    this.showCaptchaMiniGame();
-                    return;
-                }
+              
                 this.rocketCount++;
                 this.adjustDifficulty();
                 this.spawnBomb();
@@ -394,26 +391,7 @@ class GameScene extends Phaser.Scene {
         });
     }
 
-    showCaptchaMiniGame() {
-        // Basit bir captcha örneği popup
-        this.bombTimer.paused = true;
-        let c = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, "Bot musun?\nGüvercine tıkla!", {
-            font: "24px monospace",
-            fill: "#fff",
-            backgroundColor: "#a20",
-            padding: 12,
-            align: "center"
-        }).setOrigin(0.5);
-
-        let d = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY + 70, 'dove').setScale(0.5).setInteractive();
-        d.on('pointerdown', () => {
-            c.destroy();
-            d.destroy();
-            this.bombTimer.paused = false;
-            this.captchaPassed = true;
-            // Saat başı tekrar sorulabilir istersen
-        });
-    }
+ 
 
     // --- Zorluk seviyesini güncelle ---
     adjustDifficulty() {
