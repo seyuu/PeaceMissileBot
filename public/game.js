@@ -221,165 +221,367 @@ class BootScene extends Phaser.Scene {
 
 
 // --- Oyun ---
+const POWERUP_TYPES = ["extra_dove", "double_score", "slow_rockets", "freeze"];
+
 class GameScene extends Phaser.Scene {
     constructor() { super({ key: 'GameScene' }); }
+
     create(data) {
-        // Arka plan
+        // --- Temel ayarlar ---
         let side = data.side || "israel";
-        this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, side === "iran" ? "iran_bg" : "israel_bg")
+        this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, side === "iran_bg" ? "iran_bg" : "israel_bg")
             .setDisplaySize(this.cameras.main.width, this.cameras.main.height);
 
         // Binalar
         this.buildings = [];
         let bArr = buildingData[side];
         for (let b of bArr) {
-            let building = this.add.rectangle(b.x, b.y, 50, 60, 0xffffff, 0.01); // Görünmez alan, istersen sprite ile değiş
+            let building = this.add.rectangle(b.x, b.y, 50, 60, 0xffffff, 0.01);
             building.health = BUILDING_HEALTH;
             building.side = side;
             building.alive = true;
             building.setInteractive();
             this.buildings.push(building);
-
-            // Health bar
             building.healthBar = this.add.graphics();
             this.updateHealthBar(building);
         }
 
-        // Skor
+        // Skor & puan
         this.score = 0;
         this.scoreText = this.add.text(30, 20, "Score: 0", { font: '24px monospace', color: "#fff" });
 
-        // Bombalar (tekrar çağrılan zamanlayıcı)
-        this.bombs = [];
-        this.bombTimer = this.time.addEvent({
-            delay: 1100,
-            callback: this.spawnBomb,
+        // Dinamik zorluk
+        this.rocketCount = 0;
+        this.bombSpawnDelay = 1100;
+        this.bombSpeedMultiplier = 1;
+        this.doubleScoreActive = false;
+
+        // Zorluk seviyeleri
+        this.difficultyLevels = [
+            { count: 0,   delay: 1100, speed: 1.00 },
+            { count: 20,  delay: 950,  speed: 1.15 },
+            { count: 50,  delay: 800,  speed: 1.30 },
+            { count: 100, delay: 650,  speed: 1.50 },
+            { count: 150, delay: 500,  speed: 1.80 },
+            { count: 200, delay: 390,  speed: 2.10 }
+        ];
+
+        // Dinamik puan tablosu
+        this.scoreTable = [
+            { max: 20,  min: 7, maxP: 10 },
+            { max: 70,  min: 5, maxP: 8 },
+            { max: 999, min: 3, maxP: 6 }
+        ];
+
+        // Günlük görev (localStorage)
+        this.today = new Date().toISOString().slice(0, 10);
+        this.localMissions = JSON.parse(localStorage.getItem("missions") || "{}");
+        if (!this.localMissions[this.today]) {
+            this.localMissions[this.today] = { rockets: 0, claimed: false };
+        }
+        this.hourlyPlayCount = parseInt(localStorage.getItem("hourlyPlayCount") || "0");
+        this.lastPlayHour = parseInt(localStorage.getItem("lastPlayHour") || "0");
+        this.captchaPassed = false;
+
+        // Saatlik limit kontrolü
+        let nowHour = new Date().getHours();
+        if (this.lastPlayHour !== nowHour) {
+            this.hourlyPlayCount = 0;
+            localStorage.setItem("hourlyPlayCount", "0");
+            localStorage.setItem("lastPlayHour", nowHour.toString());
+        }
+
+        // Power-up timer
+        this.time.addEvent({
+            delay: Phaser.Math.Between(30000, 60000),
+            callback: () => this.spawnPowerUp(),
             callbackScope: this,
             loop: true
         });
-        
-        // Oyun bitimi
+
+        // Oyun timer
+        this.startBombTimer();
+
+        // Oyun bitti mi?
         this.gameOver = false;
     }
 
+    // --- Power-up spawn ---
+    spawnPowerUp() {
+        let type = Phaser.Utils.Array.GetRandom(POWERUP_TYPES);
+        let x = Phaser.Math.Between(60, this.cameras.main.width - 60);
+        let y = Phaser.Math.Between(70, this.cameras.main.height - 150);
+        let spriteKey = type === "extra_dove" ? 'dove' : 'coin_icon';
+        let pu = this.physics.add.sprite(x, y, spriteKey).setScale(0.6).setInteractive();
+
+        pu.on('pointerdown', () => {
+            this.activatePowerUp(type);
+            pu.destroy();
+        });
+        this.time.delayedCall(8000, () => pu.destroy());
+    }
+
+    // --- Power-up etkileri ---
+    activatePowerUp(type) {
+        if (type === "double_score") {
+            this.doubleScoreActive = true;
+            this.time.delayedCall(10000, () => this.doubleScoreActive = false);
+        }
+        if (type === "slow_rockets") {
+            this.bombSpeedMultiplier *= 0.6;
+            this.time.delayedCall(7000, () => this.adjustDifficulty());
+        }
+        if (type === "freeze") {
+            this.bombTimer.paused = true;
+            this.time.delayedCall(4000, () => this.bombTimer.paused = false);
+        }
+        if (type === "extra_dove") {
+            for(let i=0; i<3; i++) this.spawnBomb();
+        }
+    }
+
+    // --- Günlük görev kontrol ---
+    onRocketConverted() {
+        // Görev artır
+        this.localMissions[this.today].rockets += 1;
+        localStorage.setItem("missions", JSON.stringify(this.localMissions));
+        // Ödül animasyonu
+        if (!this.localMissions[this.today].claimed && this.localMissions[this.today].rockets >= 100) {
+            this.localMissions[this.today].claimed = true;
+            localStorage.setItem("missions", JSON.stringify(this.localMissions));
+            this.showDailyMissionReward();
+        }
+    }
+
+    showDailyMissionReward() {
+        // Basit animasyon veya popup
+        let r = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, "Günlük Görev Başarıldı!\n+50 Coin!", {
+            font: "28px monospace",
+            fill: "#ff0",
+            align: "center",
+            backgroundColor: "#222",
+            padding: 16
+        }).setOrigin(0.5);
+        this.time.delayedCall(2200, () => r.destroy());
+        // Coin ödülü için ekleme kodu senin coin logicine bağlı
+    }
+
+    // --- Bomb timer başlat ---
+    startBombTimer() {
+        this.bombTimer = this.time.addEvent({
+            delay: this.bombSpawnDelay,
+            callback: () => {
+                if (this.gameOver) return;
+                // Saatlik limit ve captcha kontrolü
+                this.hourlyPlayCount += 1;
+                localStorage.setItem("hourlyPlayCount", this.hourlyPlayCount.toString());
+                if (this.hourlyPlayCount > 15 && !this.captchaPassed) {
+                    this.showCaptchaMiniGame();
+                    return;
+                }
+                this.rocketCount++;
+                this.adjustDifficulty();
+                this.spawnBomb();
+                // Timer delay’ini güncelle!
+                this.bombTimer.reset({
+                    delay: this.bombSpawnDelay,
+                    callback: this.bombTimer.callback,
+                    callbackScope: this
+                });
+            },
+            callbackScope: this,
+            loop: true
+        });
+    }
+
+    showCaptchaMiniGame() {
+        // Basit bir captcha örneği popup
+        this.bombTimer.paused = true;
+        let c = this.add.text(this.cameras.main.centerX, this.cameras.main.centerY, "Bot musun?\nGüvercine tıkla!", {
+            font: "24px monospace",
+            fill: "#fff",
+            backgroundColor: "#a20",
+            padding: 12,
+            align: "center"
+        }).setOrigin(0.5);
+
+        let d = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY + 70, 'dove').setScale(0.5).setInteractive();
+        d.on('pointerdown', () => {
+            c.destroy();
+            d.destroy();
+            this.bombTimer.paused = false;
+            this.captchaPassed = true;
+            // Saat başı tekrar sorulabilir istersen
+        });
+    }
+
+    // --- Zorluk seviyesini güncelle ---
+    adjustDifficulty() {
+        for (let i = this.difficultyLevels.length - 1; i >= 0; i--) {
+            if (this.rocketCount >= this.difficultyLevels[i].count) {
+                this.bombSpawnDelay = this.difficultyLevels[i].delay;
+                this.bombSpeedMultiplier = this.difficultyLevels[i].speed;
+                break;
+            }
+        }
+    }
+
+    // --- Dinamik puan hesapla ---
+    getDynamicScore(rocketIndex) {
+        for (let i = 0; i < this.scoreTable.length; i++) {
+            if (rocketIndex <= this.scoreTable[i].max) {
+                return Phaser.Math.Between(this.scoreTable[i].min, this.scoreTable[i].maxP);
+            }
+        }
+        return 3;
+    }
+
+    // --- Bombaları spawnla (güncellenmiş spawn algoritması) ---
     spawnBomb() {
         if (this.gameOver) return;
 
-        // Hedef binayı seç
         let liveBuildings = this.buildings.filter(b => b.alive);
         if (liveBuildings.length === 0) return;
         let target = Phaser.Utils.Array.GetRandom(liveBuildings);
 
-        // Yüksek ihtimal üstten dikey, %25 ihtimal yandan açılı
         let fromSide = Math.random() < 0.25;
         let x, y, vx, vy;
+
         if (!fromSide) {
             x = target.x;
-            y = 0;
+            y = -60;
             vx = 0;
-            vy = Phaser.Math.Between(170, 240);
+            vy = Phaser.Math.Between(170, 240) * this.bombSpeedMultiplier;
         } else {
-            // Rastgele sağdan ya da soldan açılı
-            if (Math.random() < 0.5) {
-                x = 0; y = target.y - Phaser.Math.Between(80, 120);
-                vx = Phaser.Math.Between(150, 230);
-                vy = Phaser.Math.Between(100, 200);
+            let sideLeft = Math.random() < 0.5;
+            let offsetY = Phaser.Math.Between(100, 180);
+            if (sideLeft) {
+                x = -40;
+                y = Math.max(target.y - offsetY, 30);
+                vx = Phaser.Math.Between(150, 230) * this.bombSpeedMultiplier;
+                vy = Phaser.Math.Between(100, 200) * this.bombSpeedMultiplier;
             } else {
-                x = this.cameras.main.width; y = target.y - Phaser.Math.Between(80, 120);
-                vx = -Phaser.Math.Between(150, 230);
-                vy = Phaser.Math.Between(100, 200);
+                x = this.cameras.main.width + 40;
+                y = Math.max(target.y - offsetY, 30);
+                vx = -Phaser.Math.Between(150, 230) * this.bombSpeedMultiplier;
+                vy = Phaser.Math.Between(100, 200) * this.bombSpeedMultiplier;
             }
         }
+
         let bomb = this.physics.add.sprite(x, y, 'rocket');
         bomb.setDisplaySize(32, 50);
         bomb.target = target;
         bomb.setInteractive();
         bomb.vx = vx / 1000;
         bomb.vy = vy / 1000;
+        this.bombs = this.bombs || [];
         this.bombs.push(bomb);
-        bomb.rotation = Math.atan2(bomb.vy, bomb.vx) + Math.PI/2;
-        // Bombaya tıklandığında
+        bomb.rotation = Math.atan2(bomb.vy, bomb.vx) + Math.PI / 2;
+
         bomb.on('pointerdown', () => {
             this.bombExplode(bomb, false);
         });
     }
 
+    // --- Oyun döngüsü ---
     update(time, delta) {
         if (this.gameOver) return;
-
-        // Bombaların hareketi ve çarpışma kontrolü
-        for (let bomb of this.bombs) {
-            if (!bomb.active) continue;
-            bomb.x += bomb.vx * delta;
-            bomb.y += bomb.vy * delta;
-
-            // Çarpışma kontrolü
-            let b = bomb.target;
-            if (b && b.alive && Phaser.Geom.Rectangle.Contains(b.getBounds(), bomb.x, bomb.y)) {
-                this.bombExplode(bomb, true);
+        if (this.bombs) {
+            for (let bomb of this.bombs) {
+                if (!bomb.active) continue;
+                bomb.x += bomb.vx * delta;
+                bomb.y += bomb.vy * delta;
+                let b = bomb.target;
+                if (b && b.alive && Phaser.Geom.Rectangle.Contains(b.getBounds(), bomb.x, bomb.y)) {
+                    this.bombExplode(bomb, true);
+                }
+                if (bomb.y > this.cameras.main.height + 60 || bomb.x < -40 || bomb.x > this.cameras.main.width + 40) {
+                    bomb.destroy();
+                }
             }
-            // Ekran dışına çıkarsa yok et
-            if (bomb.y > this.cameras.main.height + 60 || bomb.x < -40 || bomb.x > this.cameras.main.width + 40) {
-                bomb.destroy();
-            }
+            this.bombs = this.bombs.filter(b => b.active);
         }
-        // Sağ kalan bombaları filtrele
-        this.bombs = this.bombs.filter(b => b.active);
-
-        // Bina health bar güncelle
         for (let b of this.buildings) {
             this.updateHealthBar(b);
         }
     }
 
+    // --- Bombanın patlama mantığı (puan, görev, power-up, meme!) ---
     bombExplode(bomb, isHitBuilding) {
         if (!bomb.active) return;
-        // Patlama efekti
         let exp = this.add.sprite(bomb.x, bomb.y, 'explosion').setScale(0.8);
         this.time.delayedCall(400, () => exp.destroy());
-        // Güvercin efekti (sadece bombaya tıklandıysa)
+
         if (!isHitBuilding) {
             let dove = this.add.image(bomb.x, bomb.y, 'dove').setScale(0.35);
             this.tweens.add({
                 targets: dove, y: dove.y - 80, alpha: 0,
                 duration: 700, onComplete: () => dove.destroy()
             });
-            this.score += 10;
+
+            let dynamicScore = this.getDynamicScore(this.rocketCount);
+            if (this.doubleScoreActive) dynamicScore *= 2;
+            this.score += dynamicScore;
             this.scoreText.setText(`Score: ${this.score}`);
+
+            this.onRocketConverted();
+
+            // Meme çıkart
+            if (this.rocketCount > 0 && this.rocketCount % 15 === 0) {
+                this.showRandomMeme();
+            }
         }
-        // Bina hasar aldıysa:
+
         if (isHitBuilding && bomb.target) {
             let b = bomb.target;
             if (b.alive) {
                 b.health -= 1;
                 if (b.health <= 0) {
                     b.alive = false;
-                    // Bina yok olduysa: destroyed_building ve duman efekti
                     let des = this.add.image(b.x, b.y + 15, 'destroyed_building').setDisplaySize(90, 100);
                     let smoke = this.add.sprite(b.x, b.y - 10, 'smoke').setScale(0.7);
                     this.time.delayedCall(900, () => smoke.destroy());
                     showSmoke(this, b.x, b.y - 20);
                 }
-                // Game over kontrol
                 if (this.buildings.filter(bb => bb.alive).length === 0) {
                     this.gameOver = true;
-                    this.scene.start('GameOverScene', { score: this.score });
+                    let coinEarned = Math.floor(this.score / 10);
+                    this.scene.start('GameOverScene', { score: this.score, coins: coinEarned });
                 }
             }
         }
         bomb.destroy();
     }
 
+    // --- Sağlık barı ---
     updateHealthBar(building) {
         if (!building.healthBar) return;
         building.healthBar.clear();
         if (!building.alive) return;
-        // Bina üstüne health bar
         let w = 38, h = 7;
         building.healthBar.fillStyle(0x008800, 0.7);
         building.healthBar.fillRect(building.x - w / 2, building.y - 36, w * (building.health / BUILDING_HEALTH), h);
         building.healthBar.lineStyle(1, 0xffffff, 1);
         building.healthBar.strokeRect(building.x - w / 2, building.y - 36, w, h);
+    }
+
+    // --- Random meme veya Barış Abi mesajı (örnek) ---
+    showRandomMeme() {
+        let memes = [
+            "Güvercin: 'Barışa bir adım daha!'",
+            "Barış Abi: 'Evlat, harika gidiyorsun!'",
+            "Bir meme görseli ya da komik cümle burada çıkabilir.",
+            "Barış Tweet'i: Cik cik barış, roket yok savaş!"
+        ];
+        let memeText = Phaser.Utils.Array.GetRandom(memes);
+        let t = this.add.text(this.cameras.main.centerX, 120, memeText, {
+            font: "bold 22px monospace",
+            fill: "#fff",
+            backgroundColor: "#333",
+            align: "center",
+            padding: 10
+        }).setOrigin(0.5);
+        this.time.delayedCall(1900, () => t.destroy());
     }
 }
 
@@ -390,22 +592,16 @@ class GameOverScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor("#222");
         this.add.text(this.cameras.main.centerX, 200, "Game Over!", { font: '36px monospace', color: "#fff" }).setOrigin(0.5);
         this.add.text(this.cameras.main.centerX, 250, `Score: ${data.score}`, { font: '28px monospace', color: "#ffd" }).setOrigin(0.5);
+        this.add.text(this.cameras.main.centerX, 290, `PMNOFO Coin: ${data.coins}`, { font: '24px monospace', color: "#3f6" }).setOrigin(0.5);
 
-        if (this.smokeSprites) {
-            this.smokeSprites.forEach(s => s.destroy());
-            this.smokeSprites = [];
-        }
-        // Güncellenmiş skorları Telegram bot.py'ye yolla
-        console.log("Skor gönderiliyor:", data.score);
+        sendScoreToBot(data.score); // veya data.coins göndereceksen onu da ekle!
 
-        sendScoreToBot(data.score);
-       
-
-        const retryBtn = this.add.text(this.cameras.main.centerX, 340, "Play Again", { font: '24px monospace', color: "#1df", backgroundColor: "#133" })
+        const retryBtn = this.add.text(this.cameras.main.centerX, 360, "Play Again", { font: '24px monospace', color: "#1df", backgroundColor: "#133" })
             .setOrigin(0.5).setPadding(10).setInteractive();
         retryBtn.on('pointerdown', () => { this.scene.start('LobbyScene'); });
     }
 }
+
 
 // --- How to Play ve Leaderboard ekranı ekle ---
 class HowToPlayScene extends Phaser.Scene {
@@ -414,17 +610,17 @@ class HowToPlayScene extends Phaser.Scene {
     const vars = getScaleVars(this);
     this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.96);
     this.add.text(vars.w/2, vars.h*0.1, "Amaç ve Kuralar", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
-    let msg = "🕊️ **Barış Füzesi Botuna Hoş Geldiniz!** 🕊️\n\n"+
-        "Bu oyunda amacınız, gökyüzündeki füzeleri \n\n"+"barış güvercinlerine dönüştürerek \n\n"+
-        "dünyaya barış getirmek.\n\n"+"Her başarılı dönüşüm size puan kazandırır.\n\n"+
-        "💰 **PMNOFO Coini Nasıl Kazanılır?**\n"+
-        "Her oynadığınız oyunda kazandığınız puan kadar\n\n"+"PMNOFO Coini hesabınıza eklenir. \n\n"+
-        "Ayrıca, eğer yeni bir kişisel rekor kırarsanız, \n\n"+"kırdığınız rekor puanının "+
-        "**100 katı** kadar devasa bir bonus PMNOFO Coini kazanırsınız!\n\n"+"Unutmayın, rekorlar kırın, daha çok coin toplayın!\n\n"+
-        "📊 **Genel Liderlik Tablosu**\n"+
-        "En yüksek toplam puana veya \n\n"+"en çok PMNOFO Coini'ne \n\n"+"sahip oyuncuları görmek için \n\n"+
-        "`/leaderboard` komutunu kullanın. \n\n"+"Adınızı zirveye taşıyın!\n\n"+
-        "📢 **Unutmayın:** \n\n"+"Her bir puanınız, dünyaya bir adım \n\n"+"daha fazla barış getirme çabanızı temsil ediyor. \n\n"+
+    let msg = "🕊️ Barış Füzesine Hoş Geldiniz! 🕊️\n\n"+
+        "Füzeleri barış güvercinlerine çevir,\n\n"+" dünyaya barış getir. \n\n"+
+        "Her dönüşüm puan kazandırır.\n\n"+
+        "💰 PMNOFO Coin Kazan\n"+
+        "Kazandığın puan kadar coin alırsın.\n\n"+
+        "Yeni rekor kırarsan, rekorunun \n\n"+"100 katı bonus coin kazanırsın.\n\n"+
+        "Lideri geçersen, \n\n"+"puanının 250 katı coin kazanırsın!\n\n"+
+        "📊 Liderlik Tablosu\n"+
+        "En iyi oyuncuları görmek için  \n\n"+
+        "`/leaderboard` komutunu kullanın. \n\n"+ 
+        "📢 Unutma \n\n"+"Her puan, barış için bir adım! \n\n"+
         "Haydi, göreve başlayın!";
     this.add.text(vars.w/2, vars.h*0.17, msg, { font: `${vars.fontSmall+3}px monospace`, fill: "#fff", align: "center" }).setOrigin(0.5,0);
     this.add.text(vars.w/2, vars.h - 80, "< Back", { font: `${vars.fontMid}px monospace`, fill: "#67f" })
