@@ -588,18 +588,19 @@ class HowToPlayScene extends Phaser.Scene {
     const vars = getScaleVars(this);
     this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.96);
     this.add.text(vars.w/2, vars.h*0.1, "Amaç ve Kuralar", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
-    let msg = "🕊️ Barış Füzesine Hoş Geldiniz! 🕊️\n\n"+
-        "Füzeleri barış güvercinlerine çevir,\n\n"+" dünyaya barış getir. \n\n"+
-        "Her dönüşüm puan kazandırır.\n\n"+
-        "💰 PMNOFO Coin Kazan\n"+
-        "Kazandığın puan kadar coin alırsın.\n\n"+
-        "Yeni rekor kırarsan, rekorunun \n\n"+"100 katı bonus coin kazanırsın.\n\n"+
-        "Lideri geçersen, \n\n"+"puanının 250 katı coin kazanırsın!\n\n"+
-        "📊 Liderlik Tablosu\n"+
-        "En iyi oyuncuları görmek için  \n\n"+
-        "`/leaderboard` komutunu kullanın. \n\n"+ 
-        "📢 Unutma \n\n"+"Her puan, barış için bir adım! \n\n"+
-        "Haydi, göreve başlayın!";
+   let msg = "🕊️ Welcome to Peace Missile! 🕊️\n\n" +
+    "Turn missiles into doves\n\n" + "and bring peace to the world.\n\n" +
+    "Each conversion earns you points.\n\n" +
+    "💰 Earn PMNOFO Coins\n" +
+    "You get coins equal to your score.\n\n" +
+    "Break your own record to win\n\n" + "a bonus of 100x your high score!\n\n" +
+    "If you beat the leader,\n\n" + "earn 250x your score in coins!\n\n" +
+    "📊 Leaderboard\n" +
+    "Use the `/leaderboard` command to see\n\n" +
+    "the top players.\n\n" +
+    "📢 Remember\n\n" + "Every point is a step for peace!\n\n" +
+    "Start your mission now!";
+
     this.add.text(vars.w/2, vars.h*0.17, msg, { font: `${vars.fontSmall+3}px monospace`, fill: "#fff", align: "center" }).setOrigin(0.5,0);
     this.add.text(vars.w/2, vars.h - 80, "< Back", { font: `${vars.fontMid}px monospace`, fill: "#67f" })
       .setOrigin(0.5)
