@@ -588,10 +588,9 @@ showRandomMeme() {
     const memeGroup = this.add.group();
 
     // Meme görseli (daha küçük, üstte)
-    const memeImg = this.add.image(this.cameras.main.centerX, 90, 'meme_' + meme.img)
-        .setScale(0.45)
-        .setOrigin(0.5);
-    memeGroup.add(memeImg);
+    const memeImg =  this.add.image(W/2, 60, meme.img)
+    .setScale(0.25)
+    .setOrigin(0.5, 0);
 
     // Yazı: Görselin altına, max genişlik 260px, font küçük, arka plan hafif
     const memeText = this.add.text(this.cameras.main.centerX, 145, meme.text, {
