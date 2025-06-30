@@ -588,6 +588,7 @@ showRandomMeme() {
     const memeGroup = this.add.group();
 
     // Meme görseli (daha küçük, üstte)
+    const W = this.cameras.main.width;
     const memeImg =  this.add.image(W/2, 60, meme.img)
     .setScale(0.25)
     .setOrigin(0.5, 0);
