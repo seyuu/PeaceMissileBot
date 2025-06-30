@@ -138,142 +138,101 @@ let globalUserData = {
  * ve birbirlerine göre konumlandırarak çalışır. Bu sayede farklı en-boy oranlarında
  * tutarlı bir görünüm elde edilir.
  */
+/**
+ * Phaser 3 için Lobi Sahnesi.
+ * Farklı ekran boyutlarına uyumlu olacak şekilde düzenlenmiştir.
+ */
 class LobbyScene extends Phaser.Scene {
     constructor() {
         super('LobbyScene');
     }
 
-    // `create` metodu async olarak tanımlanmalı çünkü veri çekme işlemleri (await) içeriyor.
     async create() {
-        // --- 1. Temel Değişkenler ve Ekran Boyutları ---
-        // Sahnenin genişlik ve yükseklik değerlerini doğrudan this.scale üzerinden alıyoruz.
-        // Bu, Phaser'ın kendi içindeki en doğru yöntemdir.
+        // --- 1. Temel Değişkenler ---
         const { width, height } = this.scale;
-        const margin = width * 0.05; // Ekran kenarlarında %5'lik bir boşluk bırakalım.
+        const margin = width * 0.05;
 
         // --- 2. Arka Plan ---
-        // Arka plan resmini ekranı tamamen kaplayacak şekilde boyutlandırıyoruz.
-        // En-boy oranını korumak için Math.max kullanılır, böylece resim bozulmaz,
-        // sadece taşan kısımlar ekran dışında kalır.
-        const bg = this.add.image(width / 2, height / 2, 'lobby_bg');
-        const bgScale = Math.max(width / bg.width, height / bg.height);
-        bg.setScale(bgScale).setScrollFactor(0);
+        // Arka planı genişliğe sığacak şekilde ölçeklendirip üste hizalıyoruz.
+        // Bu sayede "PEACE" ve kuş logosu her zaman görünür kalır.
+        const bg = this.add.image(width / 2, 0, 'lobby_bg').setOrigin(0.5, 0);
+        const bgScale = width / bg.width;
+        bg.setScale(bgScale);
 
-
-        // --- 3. Kullanıcı İstatistikleri Paneli (Sağ Üst Köşeye Sabitlenmiş) ---
-        // Bu panel her zaman sağ üst köşede kalacak.
-        // Yazıları sağa hizalamak için setOrigin(1, 0) kullanıyoruz.
-        // Konumları (x), ekranın sağ kenarından belirlediğimiz margin kadar içeride olacak.
+        // --- 3. Kullanıcı İstatistikleri Paneli (Sağ Üst) ---
         try {
-            await fetchUserStats(); // Kullanıcı verilerini çekmeyi bekliyoruz.
+            await fetchUserStats();
         } catch (error) {
             console.error("Kullanıcı istatistikleri alınamadı:", error);
-            // Hata durumunda varsayılan değerler atayabiliriz.
             window.userStats = { username: 'Player', score: 0, total_score: 0, total_pmno_coins: 0 };
         }
         
         const statsX = width - margin;
-        let statsY = height * 0.05; // Ekran yüksekliğinin %5'i kadar aşağıdan başlar.
+        let statsY = height * 0.05;
         const statColor = "#ffe349";
-        const smallFontSize = Math.min(width * 0.03, 20); // Font boyutu ekran genişliğine göre ayarlanır ama 20px'i geçmez.
+        const smallFontSize = Math.min(width * 0.03, 20);
         const welcomeFontSize = smallFontSize + 2;
 
-        this.add.text(statsX, statsY, `Welcome, ${userStats.username || 'Player'}!`, {
-            font: `${welcomeFontSize}px monospace`,
-            fill: "#fff",
-            align: 'right'
-        }).setOrigin(1, 0);
-
+        this.add.text(statsX, statsY, `Welcome, ${userStats.username || 'Player'}!`, { font: `${welcomeFontSize}px monospace`, fill: "#fff", align: 'right' }).setOrigin(1, 0);
         statsY += welcomeFontSize + 8;
-        this.add.text(statsX, statsY, `Max Score: ${userStats.score}`, {
-            font: `${smallFontSize}px monospace`,
-            fill: statColor,
-            align: 'right'
-        }).setOrigin(1, 0);
-
+        this.add.text(statsX, statsY, `Max Score: ${userStats.score}`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
         statsY += smallFontSize + 5;
-        this.add.text(statsX, statsY, `Total Score: ${userStats.total_score}`, {
-            font: `${smallFontSize}px monospace`,
-            fill: statColor,
-            align: 'right'
-        }).setOrigin(1, 0);
-
+        this.add.text(statsX, statsY, `Total Score: ${userStats.total_score}`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
         statsY += smallFontSize + 5;
-        this.add.text(statsX, statsY, `PMNOFO Coins: ${userStats.total_pmno_coins}`, {
-            font: `${smallFontSize}px monospace`,
-            fill: statColor,
-            align: 'right'
-        }).setOrigin(1, 0);
+        this.add.text(statsX, statsY, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
 
+        // --- 4. Merkezi Elemanlar ---
 
-        // --- 4. Merkezi Arayüz Elemanları (Buton, Liderlik Tablosu, Logo) ---
-        // Bu elemanlar dikey olarak ortalanır ve birbirlerine göre konumlandırılır.
-        // Bu sayede ekran ne kadar uzun veya geniş olursa olsun aralarındaki mesafe korunur.
-
-        // "Start Mission" Butonu (Merkezi elemanımız bu olacak)
+        // "Start Mission" Butonu
         const startBtn = this.add.image(width / 2, height * 0.62, 'button')
             .setInteractive({ cursor: 'pointer' });
-        // Butonun boyutunu ekran genişliğine göre ölçekleyelim.
-        startBtn.setScale(width * 0.0015);
-
-        this.add.text(startBtn.x, startBtn.y, "START MISSION", {
-            font: `bold ${Math.min(width * 0.05, 40)}px monospace`,
-            fill: "#13f7f7"
-        }).setOrigin(0.5);
-
+        startBtn.setScale(width * 0.0015); // Buton boyutunu ayarla
         startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
+        // Not: Buton üzerindeki "START MISSION" yazısı kaldırıldı, çünkü resimde mevcut.
 
+        // Logo (Butonun ÜSTÜNE konumlandırılır)
+        const logoY = startBtn.y - startBtn.displayHeight / 2 - (height * 0.06);
+        const logo = this.add.image(width / 2, logoY, 'logo');
+        logo.setScale(width * 0.001); // Logo boyutunu ayarla
 
-        // Liderlik Tablosu (Butonun ÜSTÜNE konumlandırılır)
-        const leaderboardY = startBtn.y - startBtn.displayHeight / 2 - (height * 0.05);
+        // Alt Menü Linkleri (Butonun ALTINA konumlandırılır)
+        const menuY = startBtn.y + startBtn.displayHeight / 2 + (height * 0.04);
+        const menuFontSize = Math.min(width * 0.035, 24);
+
+        this.add.text(width * 0.25, menuY, "Leaderboard", { font: `${menuFontSize}px monospace`, fill: "#ffe349" })
+          .setOrigin(0.5, 0).setInteractive({ cursor: 'pointer' })
+          .on('pointerup', () => this.scene.start('LeaderboardScene'));
+
+        this.add.text(width * 0.75, menuY, "How to Play?", { font: `${menuFontSize}px monospace`, fill: "#43c0f7" })
+          .setOrigin(0.5, 0).setInteractive({ cursor: 'pointer' })
+          .on('pointerup', () => this.scene.start('HowToPlayScene'));
+
+        // --- 5. Liderlik Tablosu (Ekranın ALTINA sabitlenmiş) ---
+        const leaderboardY = height - (height * 0.18); // Ekranın alt kısmında konumlandır
         const midFontSize = Math.min(width * 0.04, 28);
 
         this.add.text(width / 2, leaderboardY, "Top Players", {
             font: `bold ${midFontSize}px monospace`,
             fill: "#ffe349"
-        }).setOrigin(0.5, 1); // Origin y=1, yazıyı alt kenarından hizalar.
+        }).setOrigin(0.5, 0);
 
         try {
-            const leaders = (await fetchLeaderboard()).slice(0, 3); // İlk 3 oyuncuyu alalım
-            let leaderYPos = leaderboardY + 15;
+            const leaders = (await fetchLeaderboard()).slice(0, 3);
+            let leaderYPos = leaderboardY + midFontSize + 10;
             leaders.forEach((u, i) => {
                 this.add.text(width / 2, leaderYPos + i * (smallFontSize + 8),
                     `${i + 1}. ${u.username || 'Anon'} - ${u.total_score} pts`, {
                         font: `${smallFontSize}px monospace`,
                         fill: "#fff"
-                    }).setOrigin(0.5, 1);
+                    }).setOrigin(0.5, 0);
             });
         } catch (error) {
             console.error("Liderlik tablosu alınamadı:", error);
-            this.add.text(width / 2, leaderboardY + 20, "Leaderboard could not be loaded.", {
-                font: `${smallFontSize}px monospace`,
-                fill: "#ff5555"
-            }).setOrigin(0.5, 1);
         }
-
-        // --- 5. Alt Menü Linkleri (Butonun ALTINA konumlandırılır) ---
-        const menuY = startBtn.y + startBtn.displayHeight / 2 + (height * 0.04);
-        const menuFontSize = Math.min(width * 0.035, 24);
-
-        this.add.text(width * 0.25, menuY, "Leaderboard", {
-            font: `${menuFontSize}px monospace`,
-            fill: "#ffe349"
-        }).setOrigin(0.5, 0).setInteractive({ cursor: 'pointer' })
-          .on('pointerup', () => this.scene.start('LeaderboardScene'));
-
-        this.add.text(width * 0.75, menuY, "How to Play?", {
-            font: `${menuFontSize}px monospace`,
-            fill: "#43c0f7"
-        }).setOrigin(0.5, 0).setInteractive({ cursor: 'pointer' })
-          .on('pointerup', () => this.scene.start('HowToPlayScene'));
-
-
-        // --- 6. Logo (Ekranın ALTINA sabitlenmiş) ---
-        const logo = this.add.image(width / 2, height - (height * 0.08), 'logo');
-        // Logonun boyutunu da ekran genişliğine göre ayarlayalım.
-        logo.setScale(width * 0.0008);
     }
 }
+
+
 // --- Responsive Boyutlar ve Helper ---
 function getScaleVars(scene) {
   // Boyutları ekrana oranla al, minimum ve maksimum koy
