@@ -747,10 +747,10 @@ function sendScoreToBot(score) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         user_id: user && user.id ? String(user.id) : "anon",
-        username: u && u.username 
-              ? u.username 
-              : (u && u.first_name 
-                  ? u.first_name + (u.last_name ? " " + u.last_name : "") 
+        username: user && user.username 
+              ? user.username 
+              : (user && user.first_name 
+                  ? user.first_name + (user.last_name ? " " + user.last_name : "") 
                   : "Player"),
         score: score
       })
