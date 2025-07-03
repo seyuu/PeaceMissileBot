@@ -1,21 +1,23 @@
 // --- TELEGRAM MINI APPS ANALYTICS SDK ENTEGRASYONU ---
 (function () {
-  var s = document.createElement('script');
-  s.src = "https://cdn.jsdelivr.net/npm/@tma.js/analytics@latest";
-  s.onload = function() {
-    tma.analytics.init({
-      botUsername: 'PMNOFOGameBot', 
-      accessToken: 'eyJhcHBfbmFtZSI6IlBlYWNlTWlzc2lsZUdhbWUiLCJhcHBfdXJsIjoiaHR0cHM6Ly90Lm1lL1BNTk9GT0dhbWVCb3QiLCJhcHBfZG9tYWluIjoiaHR0cHM6Ly9wZWFjZW1pc3NpbGUtZ2FtZS11aS5vbnJlbmRlci5jb20vIn0=!ZMoot1peRfJVWVWuIjRF8B22OYVWYJgNHqLT6TlOrc8=' 
-    });
-    tma.analytics.send('app_open');
-  };
-  document.head.appendChild(s);
+  try {
+    var s = document.createElement('script');
+    s.src = "https://cdn.jsdelivr.net/npm/@tma.js/analytics@latest";
+    s.onload = function() {
+      tma.analytics.init({
+        botUsername: 'PMNOFOGameBot', 
+        accessToken: 'eyJhcHBfbmFtZSI6IlBlYWNlTWlzc2lsZUdhbWUiLCJhcHBfdXJsIjoiaHR0cHM6Ly90Lm1lL1BNTk9GT0dhbWVCb3QiLCJhcHBfZG9tYWluIjoiaHR0cHM6Ly9wZWFjZW1pc3NpbGUtZ2FtZS11aS5vbnJlbmRlci5jb20vIn0=!ZMoot1peRfJVWVWuIjRF8B22OYVWYJgNHqLT6TlOrc8=' 
+      });
+      tma.analytics.send('app_open');
+    };
+    document.head.appendChild(s);
+  } catch(e) { console.error("TMA Analytics failed to load", e); }
 })();
 
 // --- Telegram & Firestore Setup ---
 const tg = window.Telegram.WebApp;
 
-// --- Oyun Konfigürasyonu ---
+// --- Firebase Config ---
 const firebaseConfig = {
   apiKey: "AIzaSyBtOkm8dpjVXlzAXCEB5sL_Awqq4HEeemc",
   authDomain: "peacemissile-game.firebaseapp.com",
@@ -43,7 +45,7 @@ async function fetchUserStats() {
             userStats = snap.data();
             console.log("Kullanıcı verisi başarıyla çekildi:", userStats);
         } else {
-            console.log("Kullanıcı veritabanında bulunamadı. /start komutu ile oluşturulması bekleniyor.");
+            console.log("Kullanıcı veritabanında bulunamadı.");
         }
     } catch (error) {
         console.error("Kullanıcı verisi çekilirken hata:", error);
@@ -52,8 +54,14 @@ async function fetchUserStats() {
 
 // --- Leaderboard Getir ---
 async function fetchLeaderboard() {
-  const snap = await db.collection("users").orderBy("total_score", "desc").limit(5).get();
-  return snap.docs.map(doc => doc.data());
+  try {
+    const snap = await db.collection("users").orderBy("total_score", "desc").limit(5).get();
+    return snap.docs.map(doc => doc.data());
+  } catch (error) {
+    console.error("Liderlik tablosu çekilirken hata:", error);
+    // Hata durumunda boş bir array döndürerek oyunun çökmesini engelle
+    return [];
+  }
 }
 
 const MEME_MESSAGES = [
@@ -150,29 +158,21 @@ let globalUserData = {
  * Farklı ekran boyutlarına uyumlu olacak şekilde düzenlenmiştir.
  */
 class LobbyScene extends Phaser.Scene {
-    constructor() {
-        super('LobbyScene');
-    }
-
+    constructor() { super('LobbyScene'); }
     async create() {
-        // --- 1. Temel Değişkenler ---
+        console.log("LobbyScene: Creating scene...");
         const { width, height } = this.scale;
         const margin = width * 0.05;
         const statColor = "#ffe349";
         const smallFontSize = Math.min(width * 0.03, 20);
         const welcomeFontSize = smallFontSize + 2;
 
-        // --- 2. Arka Plan ---
-        // Arka planı genişliğe sığacak şekilde ölçeklendirip üste hizalıyoruz.
-        // Bu sayede "PEACE" ve kuş logosu her zaman görünür kalır.
         const bg = this.add.image(width / 2, 0, 'lobby_bg').setOrigin(0.5, 0);
         const bgScale = width / bg.width;
         bg.setScale(bgScale);
 
-         // --- 3. Placeholder Panel ---
         const statsX = width - margin;
         let statsY = height * 0.05;
-        // Bu nesneleri kaydet, sonra güncelleyeceğiz!
         this.usernameText = this.add.text(statsX, statsY, `Welcome, ...`, { font: `${welcomeFontSize}px monospace`, fill: "#fff", align: 'right' }).setOrigin(1, 0);
         statsY += welcomeFontSize + 12;
         this.maxScoreText = this.add.text(statsX, statsY, `Max Score: ...`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
@@ -181,71 +181,37 @@ class LobbyScene extends Phaser.Scene {
         statsY += smallFontSize + 9;
         this.coinsText = this.add.text(statsX, statsY, `PMNOFO Coins: ...`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
 
-        // --- 3. Kullanıcı İstatistikleri Paneli (Sağ Üst) ---
-        try {
-            await fetchUserStats();
-            this.usernameText.setText(`Welcome, ${userStats.username || 'Player'}!`);
-            this.maxScoreText.setText(`Max Score: ${userStats.score}`);
-            this.totalScoreText.setText(`Total Score: ${userStats.total_score}`);
-            this.coinsText.setText(`PMNOFO Coins: ${userStats.total_pmno_coins}`);
-        } catch (error) {
-             this.usernameText.setText(`Welcome, Player!`);
-            this.maxScoreText.setText(`Max Score: 0`);
-            this.totalScoreText.setText(`Total Score: 0`);
-            this.coinsText.setText(`PMNOFO Coins: 0`);
-        }
-        
-        // --- 4. Merkezi Elemanlar ---
-
-        // "Start Mission" Butonu
-        const startBtn = this.add.image(width / 2, height * 0.58, 'button')
-            .setInteractive({ cursor: 'pointer' });
-        startBtn.setScale(width * 0.0015); // Buton boyutunu ayarla
+        const startBtn = this.add.image(width / 2, height * 0.58, 'button').setInteractive({ cursor: 'pointer' });
+        startBtn.setScale(width * 0.0015);
         startBtn.on('pointerup', () => this.scene.start('SideSelectScene'));
-        // Not: Buton üzerindeki "START MISSION" yazısı kaldırıldı, çünkü resimde mevcut.
 
-        // Logo (Butonun ÜSTÜNE konumlandırılır)
         const logoY = startBtn.y - startBtn.displayHeight / 2 - (height * 0.06);
         const logo = this.add.image(width / 2, logoY, 'logo');
-        logo.setScale(width * 0.001); // Logo boyutunu ayarla
+        logo.setScale(width * 0.001);
 
-        // Alt Menü Linkleri (Butonun ALTINA konumlandırılır)
         const menuY = startBtn.y + startBtn.displayHeight / 2 + (height * 0.04);
         const menuFontSize = Math.min(width * 0.035, 24);
+        this.add.text(width * 0.25, menuY, "Leaderboard", { font: `${menuFontSize}px monospace`, fill: "#ffe349" }).setOrigin(0.5, 0).setInteractive({ cursor: 'pointer' }).on('pointerup', () => this.scene.start('LeaderboardScene'));
+        this.add.text(width * 0.75, menuY, "How to Play?", { font: `${menuFontSize}px monospace`, fill: "#43c0f7" }).setOrigin(0.5, 0).setInteractive({ cursor: 'pointer' }).on('pointerup', () => this.scene.start('HowToPlayScene'));
 
-        this.add.text(width * 0.25, menuY, "Leaderboard", { font: `${menuFontSize}px monospace`, fill: "#ffe349" })
-          .setOrigin(0.5, 0).setInteractive({ cursor: 'pointer' })
-          .on('pointerup', () => this.scene.start('LeaderboardScene'));
-
-        this.add.text(width * 0.75, menuY, "How to Play?", { font: `${menuFontSize}px monospace`, fill: "#43c0f7" })
-          .setOrigin(0.5, 0).setInteractive({ cursor: 'pointer' })
-          .on('pointerup', () => this.scene.start('HowToPlayScene'));
-
-        // --- 5. Liderlik Tablosu (Ekranın ALTINA sabitlenmiş) ---
-        const leaderboardY = height - (height * 0.18); // Ekranın alt kısmında konumlandır
+        const leaderboardY = height - (height * 0.18);
         const midFontSize = Math.min(width * 0.04, 28);
+        this.add.text(width / 2, leaderboardY, "Top Players", { font: `bold ${midFontSize}px monospace`, fill: "#ffe349" }).setOrigin(0.5, 0);
 
-        this.add.text(width / 2, leaderboardY, "Top Players", {
-            font: `bold ${midFontSize}px monospace`,
-            fill: "#ffe349"
-        }).setOrigin(0.5, 0);
+        // Verileri çek ve ekranı güncelle
+        await fetchUserStats();
+        this.usernameText.setText(`Welcome, ${userStats.username || 'Player'}!`);
+        this.maxScoreText.setText(`Max Score: ${userStats.score || 0}`);
+        this.totalScoreText.setText(`Total Score: ${userStats.total_score || 0}`);
+        this.coinsText.setText(`PMNOFO Coins: ${userStats.total_pmno_coins || 0}`);
 
-        try {
-            const leaders = (await fetchLeaderboard()).slice(0, 3);
-            let leaderYPos = leaderboardY + midFontSize + 10;
-            leaders.forEach((u, i) => {
-                this.add.text(width / 2, leaderYPos + i * (smallFontSize + 8),
-                    `${i + 1}. ${u.username || 'Anon'} - ${u.total_score} pts`, {
-                        font: `${smallFontSize}px monospace`,
-                        fill: "#fff"
-                    }).setOrigin(0.5, 0);
-            });
-        } catch (error) {
-            console.error("Liderlik tablosu alınamadı:", error);
-        }
+        const leaders = await fetchLeaderboard();
+        let leaderYPos = leaderboardY + midFontSize + 10;
+        leaders.slice(0, 3).forEach((u, i) => {
+            this.add.text(width / 2, leaderYPos + i * (smallFontSize + 8), `${i + 1}. ${u.username || 'Anon'} - ${u.total_score} pts`, { font: `${smallFontSize}px monospace`, fill: "#fff" }).setOrigin(0.5, 0);
+        });
     }
 }
-
 
 // --- Responsive Boyutlar ve Helper ---
 function getScaleVars(scene) {
@@ -287,33 +253,22 @@ class SideSelectScene extends Phaser.Scene {
 class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
     preload() {
-        this.load.image('iran_bg', assets.iran_bg);
-        this.load.image('israel_bg', assets.israel_bg);
-        this.load.image('lobby_bg', assets.lobby_bg);
-        this.load.image('logo', assets.logo);
-        this.load.image('destroyed_building', assets.destroyed_building);
-        this.load.image('rocket', assets.rocket);
-        this.load.image('dove', assets.dove);
-        this.load.image('coin_icon', assets.coin);
-        this.load.image('score_icon', assets.score_icon);
-        this.load.image('button', assets.button);
-        this.load.image('building_bar', assets.building_bar);
-        this.load.image('dove_peace', assets.dove_peace);
-        this.load.image('peace_bro', assets.peace_bro);
-        this.load.image('missile_to_dove', assets.missile_to_dove);
-        this.load.image('twitter_bird', assets.twitter_bird);
-        this.load.image('crowd_peace', assets.crowd_peace);
-
-        this.load.spritesheet('explosion', assets.explosion, { frameWidth: 64, frameHeight: 64 });
-        this.load.spritesheet('smoke', assets.smoke, { frameWidth: 128, frameHeight: 128});
+        console.log("BootScene: Preloading assets...");
+        Object.keys(assets).forEach(key => {
+            if (key === 'explosion' || key === 'smoke') {
+                // Spritesheet'ler için özel yükleme
+                if (key === 'explosion') this.load.spritesheet(key, assets[key], { frameWidth: 64, frameHeight: 64 });
+                if (key === 'smoke') this.load.spritesheet(key, assets[key], { frameWidth: 128, frameHeight: 128 });
+            } else {
+                this.load.image(key, assets[key]);
+            }
+        });
     }
     create() {
+        console.log("BootScene: Assets loaded, starting LobbyScene.");
         this.scene.start('LobbyScene');
     }
 }
-
-
-
 
 class GameScene extends Phaser.Scene {
     constructor() { super({ key: 'GameScene' }); }
