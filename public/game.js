@@ -12,9 +12,8 @@
   document.head.appendChild(s);
 })();
 
-// --- Telegram & Firestore Setup (skor yazımı sadece bot.py ile olacak, burada sadece gösterim var) ---
-let tg = window.Telegram && window.Telegram.WebApp;
-let currentUser = tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
+// --- Telegram & Firestore Setup ---
+const tg = window.Telegram.WebApp;
 
 // --- Oyun Konfigürasyonu ---
 const firebaseConfig = {
@@ -28,18 +27,28 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// --- Global Değişkenler ---
 let userStats = { username: "Player", score: 0, total_score: 0, total_pmno_coins: 0 };
-// -- Firebase Config (web için sadece okuma yapılacak!)
-// Firebase'i skor tablosu için sadece KULLANICIYA SKOR GÖSTERMEK için yüklemek istiyorsan, kendi config ile ekle! Yazma işini bot.py yapacak, webden yazma YOK! (Yorum satırı bıraktım!)
-async function fetchUserStats() {
-  if (!currentUser) return;
-  const ref = db.collection("users").doc(String(currentUser.id));
-  const snap = await ref.get();
-  if (snap.exists) {
-    userStats = snap.data();
-  }
-}
 
+async function fetchUserStats() {
+    if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user) {
+        console.log("Kullanıcı bilgisi alınamadı.");
+        return;
+    }
+    const userId = String(tg.initDataUnsafe.user.id);
+    const ref = db.collection("users").doc(userId);
+    try {
+        const snap = await ref.get();
+        if (snap.exists) {
+            userStats = snap.data();
+            console.log("Kullanıcı verisi başarıyla çekildi:", userStats);
+        } else {
+            console.log("Kullanıcı veritabanında bulunamadı. /start komutu ile oluşturulması bekleniyor.");
+        }
+    } catch (error) {
+        console.error("Kullanıcı verisi çekilirken hata:", error);
+    }
+}
 
 // --- Leaderboard Getir ---
 async function fetchLeaderboard() {
@@ -132,12 +141,7 @@ let globalUserData = {
     leaderboard: []
 };
 
-/**
- * Phaser 3'te farklı ekran boyutlarına uyumlu (responsive) bir lobi sahnesi.
- * Bu yaklaşım, elemanları ekranın köşelerine, kenarlarına veya merkezine sabitleyerek
- * ve birbirlerine göre konumlandırarak çalışır. Bu sayede farklı en-boy oranlarında
- * tutarlı bir görünüm elde edilir.
- */
+ 
 /**
  * Phaser 3 için Lobi Sahnesi.
  * Farklı ekran boyutlarına uyumlu olacak şekilde düzenlenmiştir.
@@ -748,34 +752,45 @@ function showSmoke(scene, x, y) {
 
 
 function sendScoreToBot(score) {
-    // Telegram Web App'in sağladığı, güvenli ve doğrulanabilir kullanıcı verisini al
-    const initData = window.Telegram?.WebApp?.initData;
-
-    // Eğer initData yoksa (örn: tarayıcıda direkt açıldıysa) gönderme
-    if (!initData) {
-        console.log("Not in Telegram environment. Score not sent.");
+    if (!tg || !tg.initData) {
+        console.error("HATA: Telegram initData bulunamadı. Skor gönderilemiyor.");
+        alert("Error: Could not verify user. Score not sent."); // Kullanıcıya geri bildirim
         return;
     }
+    
+    const initData = tg.initData;
+    console.log("Skor gönderiliyor... Skor:", score);
 
-    // API adresinize POST isteği atın.
-    // Artık user_id veya username'i body'de göndermiyoruz, çünkü sunucu bunu initData'dan alacak.
-    fetch('https://peacebot-641906716058.europe-central2.run.app/save_score', {
+    // Kendi Google Cloud Run adresin
+    const apiUrl = 'https://peacebot-641906716058.europe-central2.run.app/save_score';
+
+    fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Kimlik verisini custom bir header ile gönderiyoruz
         'X-Telegram-Init-Data': initData 
       },
       body: JSON.stringify({
-        score: score // Sadece skor bilgisini gönderiyoruz
+        score: score
       })
     })
-    .then(response => response.json())
-    .then(data => console.log('Score saved:', data))
-    .catch(error => console.error('Error saving score:', error));
+    .then(response => {
+        console.log('Sunucudan yanıt alındı. Status:', response.status);
+        if (!response.ok) {
+            // Sunucudan gelen hata mesajını logla
+            return response.json().then(err => { throw new Error(JSON.stringify(err)) });
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Skor başarıyla kaydedildi:', data);
+        // İsteğe bağlı: kullanıcıya başarılı olduğuna dair bir mesaj gösterebilirsin
+    })
+    .catch(error => {
+        console.error('HATA: Skor kaydedilirken bir sorun oluştu:', error);
+        alert("A network or server error occurred while saving the score. Please try again later.");
+    });
 }
-
-
 
 // --- Phaser Başlat ---
 const gameWidth = window.innerWidth;
@@ -791,8 +806,17 @@ const config = {
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' }
 };
 
-const game = new Phaser.Game(config);
+// OYUNU BAŞLATMADAN ÖNCE TELEGRAM'IN HAZIR OLMASINI BEKLE
+tg.ready(() => {
+    console.log("Telegram Web App hazır. Oyun başlatılıyor.");
+    // Ekranı Telegram'a göre genişlet
+    tg.expand();
+    // Oyunu şimdi başlat
+    const game = new Phaser.Game(config);
+});
 
 window.addEventListener('resize', () => {
-  game.scale.resize(window.innerWidth, window.innerHeight);
+    if (window.game) {
+        window.game.scale.resize(window.innerWidth, window.innerHeight);
+    }
 });
