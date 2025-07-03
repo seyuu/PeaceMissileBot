@@ -132,6 +132,9 @@ const assets = {
     crowd_peace: 'assets/crowd_peace.png',
 };
 
+// --- Oyun ---
+const POWERUP_TYPES = ["extra_dove", "double_score", "slow_rockets", "freeze"];
+
 // --- Global state ---
 let globalUserData = {
     username: "Player",
@@ -310,8 +313,7 @@ class BootScene extends Phaser.Scene {
 }
 
 
-// --- Oyun ---
-const POWERUP_TYPES = ["extra_dove", "double_score", "slow_rockets", "freeze"];
+
 
 class GameScene extends Phaser.Scene {
     constructor() { super({ key: 'GameScene' }); }
@@ -793,18 +795,18 @@ function sendScoreToBot(score) {
 }
 
 // --- Phaser Başlat ---
-const gameWidth = window.innerWidth;
-const gameHeight = window.innerHeight;
 const config = {
     type: Phaser.AUTO,
     parent: 'phaser-game',
-    width: gameWidth,
-    height: gameHeight,
+    width: window.innerWidth,
+    height: window.innerHeight,
     backgroundColor: "#000",
     scene: [BootScene, LobbyScene, SideSelectScene, GameScene, GameOverScene, HowToPlayScene, LeaderboardScene],
     physics: { default: "arcade", arcade: { gravity: { y: 0 } } },
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' }
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
 };
+
+let game;
 
 // OYUNU BAŞLATMADAN ÖNCE TELEGRAM'IN HAZIR OLMASINI BEKLE
 tg.ready(() => {
@@ -812,7 +814,7 @@ tg.ready(() => {
     // Ekranı Telegram'a göre genişlet
     tg.expand();
     // Oyunu şimdi başlat
-    const game = new Phaser.Game(config);
+    game = new Phaser.Game(config);
 });
 
 window.addEventListener('resize', () => {
