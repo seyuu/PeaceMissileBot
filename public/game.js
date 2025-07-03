@@ -151,6 +151,9 @@ class LobbyScene extends Phaser.Scene {
         // --- 1. Temel Değişkenler ---
         const { width, height } = this.scale;
         const margin = width * 0.05;
+        const statColor = "#ffe349";
+        const smallFontSize = Math.min(width * 0.03, 20);
+        const welcomeFontSize = smallFontSize + 2;
 
         // --- 2. Arka Plan ---
         // Arka planı genişliğe sığacak şekilde ölçeklendirip üste hizalıyoruz.
@@ -159,28 +162,32 @@ class LobbyScene extends Phaser.Scene {
         const bgScale = width / bg.width;
         bg.setScale(bgScale);
 
+         // --- 3. Placeholder Panel ---
+        const statsX = width - margin;
+        let statsY = height * 0.05;
+        // Bu nesneleri kaydet, sonra güncelleyeceğiz!
+        this.usernameText = this.add.text(statsX, statsY, `Welcome, ...`, { font: `${welcomeFontSize}px monospace`, fill: "#fff", align: 'right' }).setOrigin(1, 0);
+        statsY += welcomeFontSize + 12;
+        this.maxScoreText = this.add.text(statsX, statsY, `Max Score: ...`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
+        statsY += smallFontSize + 9;
+        this.totalScoreText = this.add.text(statsX, statsY, `Total Score: ...`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
+        statsY += smallFontSize + 9;
+        this.coinsText = this.add.text(statsX, statsY, `PMNOFO Coins: ...`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
+
         // --- 3. Kullanıcı İstatistikleri Paneli (Sağ Üst) ---
         try {
             await fetchUserStats();
+            this.usernameText.setText(`Welcome, ${userStats.username || 'Player'}!`);
+            this.maxScoreText.setText(`Max Score: ${userStats.score}`);
+            this.totalScoreText.setText(`Total Score: ${userStats.total_score}`);
+            this.coinsText.setText(`PMNOFO Coins: ${userStats.total_pmno_coins}`);
         } catch (error) {
-            console.error("Kullanıcı istatistikleri alınamadı:", error);
-            window.userStats = { username: 'Player', score: 0, total_score: 0, total_pmno_coins: 0 };
+             this.usernameText.setText(`Welcome, Player!`);
+            this.maxScoreText.setText(`Max Score: 0`);
+            this.totalScoreText.setText(`Total Score: 0`);
+            this.coinsText.setText(`PMNOFO Coins: 0`);
         }
         
-        const statsX = width - margin;
-        let statsY = height * 0.05;
-        const statColor = "#ffe349";
-        const smallFontSize = Math.min(width * 0.03, 20);
-        const welcomeFontSize = smallFontSize + 2;
-
-        this.add.text(statsX, statsY, `Welcome, ${userStats.username || 'Player'}!`, { font: `${welcomeFontSize}px monospace`, fill: "#fff", align: 'right' }).setOrigin(1, 0);
-        statsY += welcomeFontSize + 12;
-        this.add.text(statsX, statsY, `Max Score: ${userStats.score}`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
-        statsY += smallFontSize + 9;
-        this.add.text(statsX, statsY, `Total Score: ${userStats.total_score}`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
-        statsY += smallFontSize + 9;
-        this.add.text(statsX, statsY, `PMNOFO Coins: ${userStats.total_pmno_coins}`, { font: `${smallFontSize}px monospace`, fill: statColor, align: 'right' }).setOrigin(1, 0);
-
         // --- 4. Merkezi Elemanlar ---
 
         // "Start Mission" Butonu
@@ -771,7 +778,11 @@ const config = {
     backgroundColor: "#000",
     scene: [BootScene, LobbyScene, SideSelectScene, GameScene, GameOverScene, HowToPlayScene, LeaderboardScene],
     physics: { default: "arcade", arcade: { gravity: { y: 0 } } },
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' }
 };
 
 const game = new Phaser.Game(config);
+
+window.addEventListener('resize', () => {
+  game.scale.resize(window.innerWidth, window.innerHeight);
+});
