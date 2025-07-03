@@ -748,22 +748,32 @@ function showSmoke(scene, x, y) {
 
 
 function sendScoreToBot(score) {
-    const user = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.user;
+    // Telegram Web App'in sağladığı, güvenli ve doğrulanabilir kullanıcı verisini al
+    const initData = window.Telegram?.WebApp?.initData;
+
+    // Eğer initData yoksa (örn: tarayıcıda direkt açıldıysa) gönderme
+    if (!initData) {
+        console.log("Not in Telegram environment. Score not sent.");
+        return;
+    }
+
+    // API adresinize POST isteği atın.
+    // Artık user_id veya username'i body'de göndermiyoruz, çünkü sunucu bunu initData'dan alacak.
     fetch('https://peacebot-641906716058.europe-central2.run.app/save_score', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Kimlik verisini custom bir header ile gönderiyoruz
+        'X-Telegram-Init-Data': initData 
+      },
       body: JSON.stringify({
-        user_id: user && user.id ? String(user.id) : "anon",
-        username: user && user.username 
-              ? user.username 
-              : (user && user.first_name 
-                  ? user.first_name + (user.last_name ? " " + user.last_name : "") 
-                  : "Player"),
-        score: score
+        score: score // Sadece skor bilgisini gönderiyoruz
       })
     })
+    .then(response => response.json())
+    .then(data => console.log('Score saved:', data))
+    .catch(error => console.error('Error saving score:', error));
 }
-
 
 
 
