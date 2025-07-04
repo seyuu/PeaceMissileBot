@@ -50,7 +50,11 @@ def start_handler(message):
         
         markup = ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add(KeyboardButton("🚀 Play Peace Missile!", web_app=WebAppInfo(url=WEB_APP_URL)))
-        bot.send_message(message.chat.id, "Welcome to Peace Missile! Tap the button below to start your mission.", reply_markup=markup)
+        # YENİ: Kullanıcıya doğrudan tıklanabilir WebApp linki gönder
+        web_app_link = f"https://t.me/{bot.get_me().username}/webapp"
+        bot.send_message(message.chat.id,
+                         f"Welcome to Peace Missile! Tap the button below to start your mission.:\n\n"
+                         f"👉 [Start Mission]({web_app_link})", reply_markup=markup)
     except Exception as e:
         print(f"HATA (/start): {e}")
 

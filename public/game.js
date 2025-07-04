@@ -12,9 +12,14 @@
   document.head.appendChild(s);
 })();
 
-// --- Telegram & Firestore Setup (skor yazımı sadece bot.py ile olacak, burada sadece gösterim var) ---
+// Telegram WebApp context kontrolü
 let tg = window.Telegram && window.Telegram.WebApp;
-let currentUser = tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
+if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user) {
+    document.body.innerHTML = "<div style='color:white;font-size:22px;padding:40px;text-align:center;background:#222'>Lütfen oyunu Telegram uygulamasından başlat!</div>";
+    throw "Telegram WebApp context yok!";
+}
+let currentUser = tg.initDataUnsafe.user;
+
 
 // --- Oyun Konfigürasyonu ---
 const firebaseConfig = {
