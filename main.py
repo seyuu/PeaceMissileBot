@@ -15,23 +15,12 @@ SERVER_URL = os.environ.get("SERVER_URL")
 # Flask ve bot başlat
 app = Flask(__name__)
 
-# CORS desteği ekle - daha kapsamlı
+# CORS desteği ekle
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
-
-# OPTIONS isteklerini handle et
-@app.route('/save_score', methods=['OPTIONS'])
-def handle_options():
-    response = app.make_default_options_response()
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Origin', 'https://peacemissile-game-ui.onrender.com')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     return response
 if not BOT_TOKEN:
     raise ValueError("TELEGRAM_TOKEN ortam değişkeni eksik!")
@@ -169,18 +158,6 @@ def privacy_handler(message):
 def health_check():
     return jsonify({"status": "healthy", "bot": "running"})
 
-# Telegram webhook endpoint
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    try:
-        update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
-        if update:
-            bot.process_new_updates([update])
-        return jsonify({"status": "ok"})
-    except Exception as e:
-        print(f"[LOG] Webhook hatası: {e}")
-        return jsonify({"error": str(e)}), 500
-
 # Skor kaydetme endpoint'i
 @app.route('/save_score', methods=['POST'])
 def save_score():
@@ -253,16 +230,11 @@ if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     print(f"[LOG] Flask port: {port}")
     
-    # Render'da gunicorn kullanılıyorsa sadece Flask'ı çalıştır
-    if os.environ.get('RENDER'):
-        print("[LOG] Render ortamında çalışıyor, sadece Flask başlatılıyor...")
-        app.run(host='0.0.0.0', port=port, debug=False)
-    else:
-        # Local development: Flask'ı ayrı thread'de çalıştır
-        import threading
-        flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=port, debug=False))
-        flask_thread.daemon = True
-        flask_thread.start()
-        
-        # Bot'u ana thread'de çalıştır
-        bot.polling(none_stop=True, timeout=60)
+    # Flask'ı ayrı thread'de çalıştır
+    import threading
+    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=port, debug=False))
+    flask_thread.daemon = True
+    flask_thread.start()
+    
+    # Bot'u ana thread'de çalıştır
+    bot.polling(none_stop=True, timeout=60)
