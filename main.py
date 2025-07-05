@@ -15,12 +15,23 @@ SERVER_URL = os.environ.get("SERVER_URL")
 # Flask ve bot başlat
 app = Flask(__name__)
 
-# CORS desteği ekle
+# CORS desteği ekle - daha kapsamlı
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
+
+# OPTIONS isteklerini handle et
+@app.route('/save_score', methods=['OPTIONS'])
+def handle_options():
+    response = app.make_default_options_response()
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response
 if not BOT_TOKEN:
     raise ValueError("TELEGRAM_TOKEN ortam değişkeni eksik!")
