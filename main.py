@@ -175,6 +175,51 @@ def privacy_handler(message):
     )
     bot.send_message(message.chat.id, privacy_text, parse_mode="HTML")
 
+@bot.message_handler(commands=['leaderboard'])
+def leaderboard_handler(message):
+    try:
+        if db is not None:
+            try:
+                # Top 10 oyuncuyu al
+                users_ref = db.collection("users").order_by("total_score", direction=firestore.Query.DESCENDING).limit(10)
+                users = users_ref.stream()
+                
+                leaderboard_text = "🚀🕊️☮️ <b>PEACE MISSILE LEADERBOARD</b> ☮️🕊️🚀\n\n"
+                leaderboard_text += "🏆 <b>Top 10 Players</b> 🏆\n\n"
+                
+                for i, user in enumerate(users, 1):
+                    user_data = user.to_dict()
+                    if user_data:
+                        username = user_data.get('username', 'Anonymous')
+                        total_score = user_data.get('total_score', 0)
+                        score = user_data.get('score', 0)
+                        coins = user_data.get('total_pmno_coins', 0)
+                    
+                    # Emoji'ler
+                    if i == 1:
+                        medal = "🥇"
+                    elif i == 2:
+                        medal = "🥈"
+                    elif i == 3:
+                        medal = "🥉"
+                    else:
+                        medal = f"{i}."
+                    
+                    leaderboard_text += f"{medal} <b>{username}</b>\n"
+                    leaderboard_text += f"   📊 Total: {total_score:,} | 🏅 High: {score:,} | 🪙 Coins: {coins:,}\n\n"
+                
+                bot.send_message(message.chat.id, leaderboard_text, parse_mode="HTML")
+                
+            except Exception as e:
+                print(f"[LOG] Leaderboard Firestore hatası: {e}")
+                bot.send_message(message.chat.id, "Leaderboard yüklenirken hata oluştu.")
+        else:
+            bot.send_message(message.chat.id, "Leaderboard şu anda kullanılamıyor.")
+            
+    except Exception as e:
+        print(f"[LOG] Leaderboard handler hatası: {e}")
+        bot.send_message(message.chat.id, "Bir hata oluştu.")
+
 # Health check endpoint
 @app.route('/health', methods=['GET'])
 def health_check():

@@ -40,23 +40,45 @@ if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
             username: "user"
         };
     } else {
-        console.log("URL'den kullanıcı ID'si alınamadı, test modu kullanılıyor");
-        // Test modu için gerçek kullanıcı ID'sini kullan
-        currentUser = {
-            id: 863116061, // Gerçek kullanıcı ID'si
-            first_name: "saseyuu",
-            username: "saseyuu"
-        };
+        // Sadece local development için test modu
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        if (isLocalhost) {
+            console.log("Local development: Test modu kullanılıyor");
+            currentUser = {
+                id: 863116061, // Test kullanıcı ID'si
+                first_name: "saseyuu",
+                username: "saseyuu"
+            };
+        } else {
+            console.error("Production: Telegram WebApp context bulunamadı!");
+            // Hata mesajı göster
+            showErrorMessage("Telegram WebApp context bulunamadı. Lütfen Telegram'dan açın.");
+        }
     }
 }
 
 console.log("WebApp kullanıcı ID'si:", currentUser.id);
 
+// Log seviyesi kontrolü
+const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+const LOG_LEVEL = isProduction ? 'ERROR' : 'DEBUG'; // Production'da sadece hatalar
+
+function log(level, message, data = null) {
+    if (level === 'ERROR' || LOG_LEVEL === 'DEBUG') {
+        if (data) {
+            console.log(`[${level}] ${message}`, data);
+        } else {
+            console.log(`[${level}] ${message}`);
+        }
+    }
+}
+
 // WebApp yüklendiğinde otomatik olarak kullanıcı verilerini yükle
 setTimeout(async () => {
-    console.log("WebApp yüklendi, kullanıcı verileri yükleniyor...");
+    log('INFO', "WebApp yüklendi, kullanıcı verileri yükleniyor...");
     await fetchUserStats();
-    console.log("WebApp yükleme tamamlandı, userStats:", userStats);
+    log('INFO', "WebApp yükleme tamamlandı, userStats:", userStats);
 }, 1000);
 
 
@@ -88,36 +110,34 @@ console.log("Kullanıcı verileri ayarlandı:", userStats);
 // -- Firebase Config (web için sadece okuma yapılacak!)
 // Firebase'i skor tablosu için sadece KULLANICIYA SKOR GÖSTERMEK için yüklemek istiyorsan, kendi config ile ekle! Yazma işini bot.py yapacak, webden yazma YOK! (Yorum satırı bıraktım!)
 async function fetchUserStats() {
-  console.log("=== fetchUserStats başladı ===");
+  log('DEBUG', "=== fetchUserStats başladı ===");
   
   if (!currentUser) {
-    console.log("fetchUserStats: currentUser bulunamadı");
+    log('ERROR', "fetchUserStats: currentUser bulunamadı");
     return;
   }
   
-  console.log("fetchUserStats: currentUser.id =", currentUser.id);
-  console.log("fetchUserStats: currentUser =", currentUser);
+  log('DEBUG', "fetchUserStats: currentUser.id =", currentUser.id);
+  log('DEBUG', "fetchUserStats: currentUser =", currentUser);
   
   try {
     const ref = db.collection("users").doc(String(currentUser.id));
-    console.log("fetchUserStats: Firebase path =", `users/${currentUser.id}`);
+    log('DEBUG', "fetchUserStats: Firebase path =", `users/${currentUser.id}`);
     
     const snap = await ref.get();
-    console.log("fetchUserStats: Firebase response exists =", snap.exists);
+    log('DEBUG', "fetchUserStats: Firebase response exists =", snap.exists);
     
     if (snap.exists) {
       userStats = snap.data();
-      console.log("fetchUserStats: Kullanıcı verisi yüklendi =", userStats);
-      console.log("fetchUserStats: userStats.username =", userStats.username);
-      console.log("fetchUserStats: userStats.score =", userStats.score);
+      log('INFO', "fetchUserStats: Kullanıcı verisi yüklendi =", userStats);
     } else {
-      console.log("fetchUserStats: Kullanıcı verisi bulunamadı");
+      log('INFO', "fetchUserStats: Kullanıcı verisi bulunamadı");
     }
   } catch (error) {
-    console.error("fetchUserStats: Firebase hatası =", error);
+    log('ERROR', "fetchUserStats: Firebase hatası =", error);
   }
   
-  console.log("=== fetchUserStats bitti ===");
+  log('DEBUG', "=== fetchUserStats bitti ===");
 }
 
 
@@ -767,9 +787,30 @@ class GameOverScene extends Phaser.Scene {
         }
         console.log("=== GameOverScene bitti ===");
 
-        const retryBtn = this.add.text(this.cameras.main.centerX, 360, "Play Again", { font: '24px monospace', color: "#1df", backgroundColor: "#133" })
+        // --- Butonlar ---
+        const btnY = 360;
+        const btnSpacing = 170;
+        const btns = [];
+        // Play Again
+        const playAgainBtn = this.add.text(this.cameras.main.centerX, btnY, "🔄 Play Again", { font: '24px monospace', color: "#1df", backgroundColor: "#133" })
             .setOrigin(0.5).setPadding(10).setInteractive();
-        retryBtn.on('pointerdown', () => { this.scene.start('LobbyScene'); });
+        playAgainBtn.on('pointerdown', () => { this.scene.start('LobbyScene'); });
+        btns.push(playAgainBtn);
+        // Main Menu
+        const mainMenuBtn = this.add.text(this.cameras.main.centerX - btnSpacing, btnY, "🏠 Main Menu", { font: '24px monospace', color: "#fff", backgroundColor: "#222" })
+            .setOrigin(0.5).setPadding(10).setInteractive();
+        mainMenuBtn.on('pointerdown', () => { this.scene.start('LobbyScene'); });
+        btns.push(mainMenuBtn);
+        // Leaderboard
+        const leaderboardBtn = this.add.text(this.cameras.main.centerX + btnSpacing, btnY, "📊 Leaderboard", { font: '24px monospace', color: "#ffe349", backgroundColor: "#222" })
+            .setOrigin(0.5).setPadding(10).setInteractive();
+        leaderboardBtn.on('pointerdown', () => { this.scene.start('LeaderboardScene'); });
+        btns.push(leaderboardBtn);
+        // Help
+        const helpBtn = this.add.text(this.cameras.main.centerX, btnY + 60, "❓ Help", { font: '22px monospace', color: "#67f", backgroundColor: "#222" })
+            .setOrigin(0.5).setPadding(8).setInteractive();
+        helpBtn.on('pointerdown', () => { this.scene.start('HowToPlayScene'); });
+        btns.push(helpBtn);
     }
 }
 
@@ -924,6 +965,31 @@ function showBonusMessage(message) {
         // 5 saniye sonra sil
         gameOverScene.time.delayedCall(5000, () => {
             bonusText.destroy();
+        });
+    }
+}
+
+// Hata mesajını göster
+function showErrorMessage(message) {
+    const currentScene = game.scene.getScene(game.scene.getActiveScene());
+    if (currentScene) {
+        const vars = getScaleVars(currentScene);
+        const errorText = currentScene.add.text(
+            vars.w/2, 
+            vars.h*0.3, 
+            message, 
+            { 
+                font: '20px monospace', 
+                color: "#ff4444",
+                backgroundColor: "#1a1a1a",
+                align: "center",
+                padding: { left: 15, right: 15, top: 10, bottom: 10 }
+            }
+        ).setOrigin(0.5);
+        
+        // 10 saniye sonra sil
+        currentScene.time.delayedCall(10000, () => {
+            errorText.destroy();
         });
     }
 }
