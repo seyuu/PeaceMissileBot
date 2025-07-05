@@ -66,7 +66,8 @@ def start_handler(message):
             print("[LOG] Firebase mevcut değil, kullanıcı verisi kaydedilmiyor")
 
         markup = ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add(KeyboardButton("🚀 Play Peace Missile!", web_app=WebAppInfo(url=WEB_APP_URL)))
+        webapp_url_with_user = f"{WEB_APP_URL}?user_id={user_id}"
+        markup.add(KeyboardButton("🚀 Play Peace Missile!", web_app=WebAppInfo(url=webapp_url_with_user)))
         message_text = (
             "🚀🕊️☮️ <b>PEACE MISSILE</b> ☮️🕊️🚀\n\n"
             "welcome to peace missile!\n\n"

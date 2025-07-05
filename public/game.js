@@ -17,15 +17,30 @@ let tg = window.Telegram && window.Telegram.WebApp;
 let currentUser = null;
 
 // WebApp hazır olduğunda kullanıcı bilgilerini al
-if (tg) {
+if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
     tg.ready();
     tg.expand();
+    currentUser = tg.initDataUnsafe.user;
+    console.log("Telegram WebApp context bulundu:", currentUser);
+} else {
+    console.log("Telegram WebApp context bulunamadı, URL parametrelerinden kullanıcı ID'si aranıyor...");
     
-    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-        currentUser = tg.initDataUnsafe.user;
-        console.log("Telegram WebApp context bulundu:", currentUser);
+    // URL'den kullanıcı ID'sini almaya çalış
+    const urlParams = new URLSearchParams(window.location.search);
+    console.log("URL parametreleri:", window.location.search);
+    console.log("URL parametreleri objesi:", Object.fromEntries(urlParams));
+    const userId = urlParams.get('user_id') || urlParams.get('tgWebAppData');
+    console.log("Bulunan user_id:", userId);
+    
+    if (userId) {
+        console.log("URL'den kullanıcı ID'si alındı:", userId);
+        currentUser = {
+            id: parseInt(userId),
+            first_name: "User",
+            username: "user"
+        };
     } else {
-        console.log("Telegram WebApp context bulunamadı, test modu kullanılıyor");
+        console.log("URL'den kullanıcı ID'si alınamadı, test modu kullanılıyor");
         // Test modu için gerçek kullanıcı ID'sini kullan
         currentUser = {
             id: 863116061, // Gerçek kullanıcı ID'si
@@ -33,14 +48,6 @@ if (tg) {
             username: "saseyuu"
         };
     }
-} else {
-    console.log("Telegram WebApp API bulunamadı");
-    // Test modu için gerçek kullanıcı ID'sini kullan
-    currentUser = {
-        id: 863116061, // Gerçek kullanıcı ID'si
-        first_name: "saseyuu",
-        username: "saseyuu"
-    };
 }
 
 console.log("WebApp kullanıcı ID'si:", currentUser.id);
