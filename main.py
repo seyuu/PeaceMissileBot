@@ -169,6 +169,18 @@ def privacy_handler(message):
 def health_check():
     return jsonify({"status": "healthy", "bot": "running"})
 
+# Telegram webhook endpoint
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    try:
+        update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
+        if update:
+            bot.process_new_updates([update])
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        print(f"[LOG] Webhook hatası: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # Skor kaydetme endpoint'i
 @app.route('/save_score', methods=['POST'])
 def save_score():
@@ -241,11 +253,16 @@ if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     print(f"[LOG] Flask port: {port}")
     
-    # Flask'ı ayrı thread'de çalıştır
-    import threading
-    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=port, debug=False))
-    flask_thread.daemon = True
-    flask_thread.start()
-    
-    # Bot'u ana thread'de çalıştır
-    bot.polling(none_stop=True, timeout=60)
+    # Render'da gunicorn kullanılıyorsa sadece Flask'ı çalıştır
+    if os.environ.get('RENDER'):
+        print("[LOG] Render ortamında çalışıyor, sadece Flask başlatılıyor...")
+        app.run(host='0.0.0.0', port=port, debug=False)
+    else:
+        # Local development: Flask'ı ayrı thread'de çalıştır
+        import threading
+        flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=port, debug=False))
+        flask_thread.daemon = True
+        flask_thread.start()
+        
+        # Bot'u ana thread'de çalıştır
+        bot.polling(none_stop=True, timeout=60)
