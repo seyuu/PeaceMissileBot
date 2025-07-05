@@ -785,9 +785,9 @@ class HowToPlayScene extends Phaser.Scene {
     "Turn missiles into doves\n\n" + "and bring peace to the world.\n\n" +
     "Each conversion earns you points.\n\n" +
     "💰 Earn PMNOFO Coins\n" +
-    "You get coins equal to your score.\n\n" +
-    "Break your own record to win\n\n" + "a bonus of 100x your high score!\n\n" +
-    "If you beat the leader,\n\n" + "earn 250x your score in coins!\n\n" +
+    "You get 1 coin per 10 points.\n\n" +
+    "Break your own record to win\n\n" + "a bonus of 10x your high score!\n\n" +
+    "If you beat the leader,\n\n" + "earn 25x your score in coins!\n\n" +
     "📊 Leaderboard\n" +
     "Use the `/leaderboard` command to see\n\n" +
     "the top players.\n\n" +

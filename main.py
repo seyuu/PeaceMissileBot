@@ -210,9 +210,9 @@ def save_score():
                     coins_earned = base_coins
                     bonus_message = ""
                     
-                    # High score bonus (100x high score)
+                    # High score bonus (10x high score)
                     if score > current_score:
-                        high_score_bonus = score * 100
+                        high_score_bonus = score * 10
                         coins_earned += high_score_bonus
                         bonus_message += f"🏆 High Score Bonus: +{high_score_bonus} coins\n"
                     
@@ -228,7 +228,7 @@ def save_score():
                         
                         # Eğer bu kullanıcı en yüksek skora sahipse leader bonus
                         if score >= highest_score and score > current_score:
-                            leader_bonus = score * 250
+                            leader_bonus = score * 25
                             coins_earned += leader_bonus
                             bonus_message += f"👑 Leader Bonus: +{leader_bonus} coins\n"
                     except Exception as e:
