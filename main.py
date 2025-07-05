@@ -181,7 +181,7 @@ def leaderboard_handler(message):
         if db is not None:
             try:
                 # Top 10 oyuncuyu al
-                users_ref = db.collection("users").order_by("total_score", direction=firestore.Query.DESCENDING).limit(10)
+                users_ref = db.collection("users").order_by("total_score", direction="DESCENDING").limit(10)
                 users = users_ref.stream()
                 
                 leaderboard_text = "🚀🕊️☮️ <b>PEACE MISSILE LEADERBOARD</b> ☮️🕊️🚀\n\n"
