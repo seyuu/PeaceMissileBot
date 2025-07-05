@@ -747,13 +747,21 @@ showRandomMeme() {
 class GameOverScene extends Phaser.Scene {
     constructor() { super({ key: 'GameOverScene' }); }
     async create(data) {
+        console.log("=== GameOverScene başladı ===");
+        console.log("GameOverScene data:", data);
+        console.log("GameOverScene currentUser:", currentUser);
+        console.log("GameOverScene db:", db);
+        
         this.cameras.main.setBackgroundColor("#222");
         this.add.text(this.cameras.main.centerX, 200, "Game Over!", { font: '36px monospace', color: "#fff" }).setOrigin(0.5);
         this.add.text(this.cameras.main.centerX, 250, `Score: ${data.score}`, { font: '28px monospace', color: "#ffd" }).setOrigin(0.5);
         this.add.text(this.cameras.main.centerX, 290, `PMNOFO Coin: ${data.coins}`, { font: '24px monospace', color: "#3f6" }).setOrigin(0.5);
 
         // Skoru Firebase'e kaydet
+        console.log("sendScoreToBot çağrılıyor...");
         await sendScoreToBot(data.score);
+        console.log("sendScoreToBot tamamlandı");
+        console.log("=== GameOverScene bitti ===");
 
         const retryBtn = this.add.text(this.cameras.main.centerX, 360, "Play Again", { font: '24px monospace', color: "#1df", backgroundColor: "#133" })
             .setOrigin(0.5).setPadding(10).setInteractive();
@@ -835,66 +843,41 @@ async function sendScoreToBot(score) {
     }
     
     try {
-        // Firebase'e doğrudan kaydet
-        const userRef = db.collection("users").doc(String(currentUser.id));
-        const userDoc = await userRef.get();
+        // Bot endpoint'ine skor gönder
+        const botUrl = 'http://localhost:5000/save_score'; // Local test için
+        console.log("Bot URL'ine istek gönderiliyor:", botUrl);
         
-        if (userDoc.exists) {
-            const userData = userDoc.data();
-            const currentScore = userData.score || 0;
-            const currentTotalScore = userData.total_score || 0;
-            const currentCoins = userData.total_pmno_coins || 0;
-            
-            // Yeni skor daha yüksekse güncelle
-            const newScore = Math.max(currentScore, score);
-            const newTotalScore = currentTotalScore + score;
-            const coinsEarned = Math.floor(score / 10);
-            const newTotalCoins = currentCoins + coinsEarned;
-            
-            console.log("Mevcut veriler:", {
-                score: currentScore,
-                total_score: currentTotalScore,
-                total_pmno_coins: currentCoins
-            });
-            
-            console.log("Yeni veriler:", {
-                score: newScore,
-                total_score: newTotalScore,
-                total_pmno_coins: newTotalCoins,
-                coins_earned: coinsEarned
-            });
-            
-            // Firebase'e kaydet
-            await userRef.update({
-                score: newScore,
-                total_score: newTotalScore,
-                total_pmno_coins: newTotalCoins
-            });
-            
-            console.log("Skor başarıyla Firebase'e kaydedildi!");
+        const response = await fetch(botUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_id: currentUser.id,
+                score: score
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log("Skor başarıyla kaydedildi:", result);
             
             // Kullanıcı verilerini güncelle
             userStats = {
-                score: newScore,
-                total_score: newTotalScore,
-                total_pmno_coins: newTotalCoins,
-                username: userData.username
+                score: result.new_score,
+                total_score: result.new_total_score,
+                total_pmno_coins: result.new_total_coins,
+                username: currentUser.username || "Player"
             };
             
+            console.log("Kullanıcı verileri güncellendi:", userStats);
         } else {
-            console.log("Kullanıcı dokümanı bulunamadı, yeni kullanıcı oluşturuluyor");
-            const coinsEarned = Math.floor(score / 10);
-            await userRef.set({
-                username: currentUser.username || "Player",
-                score: score,
-                total_score: score,
-                total_pmno_coins: coinsEarned
-            });
-            console.log("Yeni kullanıcı oluşturuldu ve skor kaydedildi!");
+            const error = await response.json();
+            console.error("Skor kaydedilirken hata:", error);
         }
         
     } catch (error) {
-        console.error("Firebase'e skor kaydedilirken hata:", error);
+        console.error("Skor gönderme hatası:", error);
     }
     
     console.log("=== sendScoreToBot bitti ===");

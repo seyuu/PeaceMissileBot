@@ -1,7 +1,7 @@
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
-from flask import Flask
+from flask import Flask, request, jsonify
 import telebot
 from telebot.types import WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
 from collections import defaultdict
@@ -14,6 +14,14 @@ SERVER_URL = os.environ.get("SERVER_URL")
 
 # Flask ve bot başlat
 app = Flask(__name__)
+
+# CORS desteği ekle
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    return response
 if not BOT_TOKEN:
     raise ValueError("TELEGRAM_TOKEN ortam değişkeni eksik!")
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -145,6 +153,78 @@ def privacy_handler(message):
     )
     bot.send_message(message.chat.id, privacy_text, parse_mode="HTML")
 
+# Skor kaydetme endpoint'i
+@app.route('/save_score', methods=['POST'])
+def save_score():
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        score = data.get('score')
+        
+        if not user_id or not score:
+            return jsonify({"error": "Missing user_id or score"}), 400
+        
+        print(f"[LOG] Skor kaydetme isteği: user_id={user_id}, score={score}")
+        
+        if db is not None:
+            try:
+                user_ref = db.collection("users").document(str(user_id))
+                user_doc = user_ref.get()
+                
+                if user_doc.exists:
+                    user_data = user_doc.to_dict()
+                    if user_data:
+                        current_score = user_data.get('score', 0)
+                        current_total_score = user_data.get('total_score', 0)
+                        current_coins = user_data.get('total_pmno_coins', 0)
+                    else:
+                        current_score = 0
+                        current_total_score = 0
+                        current_coins = 0
+                    
+                    # Yeni skor daha yüksekse güncelle
+                    new_score = max(current_score, score)
+                    new_total_score = current_total_score + score
+                    coins_earned = score // 10
+                    new_total_coins = current_coins + coins_earned
+                    
+                    user_ref.update({
+                        'score': new_score,
+                        'total_score': new_total_score,
+                        'total_pmno_coins': new_total_coins
+                    })
+                    
+                    print(f"[LOG] Skor başarıyla kaydedildi: user_id={user_id}, new_score={new_score}, new_total_score={new_total_score}, new_total_coins={new_total_coins}")
+                    
+                    return jsonify({
+                        "success": True,
+                        "new_score": new_score,
+                        "new_total_score": new_total_score,
+                        "new_total_coins": new_total_coins,
+                        "coins_earned": coins_earned
+                    })
+                else:
+                    print(f"[LOG] Kullanıcı bulunamadı: {user_id}")
+                    return jsonify({"error": "User not found"}), 404
+                    
+            except Exception as e:
+                print(f"[LOG] Firestore skor kaydetme hatası: {e}")
+                return jsonify({"error": "Database error"}), 500
+        else:
+            print("[LOG] Firebase bağlantısı yok")
+            return jsonify({"error": "Database not available"}), 500
+            
+    except Exception as e:
+        print(f"[LOG] Skor kaydetme endpoint hatası: {e}")
+        return jsonify({"error": "Server error"}), 500
+
 if __name__ == "__main__":
     print("[LOG] Bot başlatılıyor...")
+    # Flask'ı ayrı thread'de çalıştır
+    import threading
+    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, debug=False))
+    flask_thread.daemon = True
+    flask_thread.start()
+    
+    # Bot'u ana thread'de çalıştır
     bot.polling(none_stop=True, timeout=60)
