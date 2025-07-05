@@ -73,13 +73,7 @@ try {
   console.error("Firebase başlatma hatası:", error);
 }
 
-// Kullanıcı verilerini sabit olarak ayarla (test için)
-let userStats = { 
-    username: "saseyuu", 
-    score: 109, 
-    total_score: 11719, 
-    total_pmno_coins: 84439 
-};
+let userStats = { username: "Player", score: 0, total_score: 0, total_pmno_coins: 0 };
 
 console.log("Kullanıcı verileri ayarlandı:", userStats);
 
