@@ -36,13 +36,35 @@ except Exception as e:
     print(f"HATA: Firebase başlatılırken hata oluştu: {e}")
     raise e
 
+def escape_markdown(text: str) -> str:
+    """
+    Telegram MarkdownV2 formatına göre özel karakterleri kaçırır.
+    """
+    if not text:
+        return ""
+    # Telegram'ın dokümantasyonunda belirtilen özel karakterler:
+    escape_chars = r"\_*[]()~`>#+-=|{}.!"
+    for char in escape_chars:
+        text = text.replace(char, "\\" + char)
+    return text
+
+
 # --- 3. TELEGRAM BOT KOMUTLARI ---
 @bot.message_handler(commands=['start'])
 def start_handler(message):
     try:
-        print(f"/start komutu alındı: user_id={message.from_user.id}")
         user_id = str(message.from_user.id)
-        username = message.from_user.username or message.from_user.first_name or "Player"
+        first_name = message.from_user.first_name or ""
+        last_name = message.from_user.last_name or ""
+        username = (
+            message.from_user.username or
+            (first_name + (" " + last_name if last_name else "")) or
+            "Player"
+        )
+
+         # Escape username for MarkdownV2
+        safe_username = escape_markdown(username)
+
         ref = db.collection("users").document(user_id)
         if not ref.get().exists:
             print(f"Yeni kullanıcı oluşturuluyor: {user_id} - {username}")
@@ -52,9 +74,10 @@ def start_handler(message):
         markup.add(KeyboardButton("🚀 Play Peace Missile!", web_app=WebAppInfo(url=WEB_APP_URL)))
         # YENİ: Kullanıcıya doğrudan tıklanabilir WebApp linki gönder
         web_app_link = f"https://t.me/{bot.get_me().username}/webapp"
+        safe_web_app_link = escape_markdown(web_app_link)
         bot.send_message(message.chat.id,
                          f"Welcome to Peace Missile! Tap the button below to start your mission.:\n\n"
-                         f"👉 [Start Mission]({web_app_link})", reply_markup=markup)
+                         f"👉 [Start Mission]({safe_web_app_link})", reply_markup=markup, parse_mode="MarkdownV2")
     except Exception as e:
         print(f"HATA (/start): {e}")
 
@@ -112,7 +135,13 @@ def save_score():
 
     try:
         user_id = str(validated_user.get("id"))
-        username = validated_user.get("username", "Player")
+        first_name = validated_user.get("first_name", "")
+        last_name = validated_user.get("last_name", "")
+        username = (
+            validated_user.get("username") or
+            (first_name + (" " + last_name if last_name else "")) or
+            "Player"
+        )
         data = request.json or {}
         score = int(data.get("score", 0))
         print(f"Skor kaydediliyor: user_id={user_id}, username={username}, score={score}")
