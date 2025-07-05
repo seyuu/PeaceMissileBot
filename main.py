@@ -31,7 +31,19 @@ RATE_LIMIT_SECONDS = 2
 # Firebase başlatma ve log
 try:
     print("[LOG] Firebase başlatılıyor...")
-    cred = credentials.Certificate("firebase-key.json")
+    
+    # Environment variable'dan Firebase key'i al
+    firebase_key_json = os.environ.get('FIREBASE_KEY_JSON')
+    
+    if firebase_key_json:
+        # Environment variable'dan JSON string'i parse et
+        import json
+        firebase_key_dict = json.loads(firebase_key_json)
+        cred = credentials.Certificate(firebase_key_dict)
+    else:
+        # Dosyadan oku (local development için)
+        cred = credentials.Certificate("firebase-key.json")
+    
     if not firebase_admin._apps:
         firebase_admin.initialize_app(cred)
     db = firestore.client()
