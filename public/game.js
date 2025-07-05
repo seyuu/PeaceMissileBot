@@ -847,11 +847,11 @@ async function sendScoreToBot(score) {
     }
     
     try {
-        // Bot URL'ini belirle - production'da Render URL'i kullan
+        // Bot URL'ini belirle - production'da Google Cloud Run URL'i kullan
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         const botUrl = isLocalhost 
             ? 'http://localhost:5000/save_score' 
-            : 'https://peacemissile-bot.onrender.com/save_score'; // Bu URL'i Render'da deploy ettikten sonra güncelle
+            : 'https://peacebot-641906716058.europe-central2.run.app/save_score';
         
         console.log("Bot URL'ine istek gönderiliyor:", botUrl);
         
