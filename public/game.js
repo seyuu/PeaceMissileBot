@@ -753,13 +753,16 @@ function sendScoreToBot(score) {
         return;
     }
     fetch('https://peacebot-641906716058.europe-central2.run.app/save_score', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        score: score
-      })
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Telegram-Init-Data': initData // <-- EKLEDİK!
+        },
+        body: JSON.stringify({ score: score })
     })
+    .then(r => r.json()).then(console.log).catch(console.error);
 }
+
 
 
 
