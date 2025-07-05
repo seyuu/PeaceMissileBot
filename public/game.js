@@ -786,8 +786,8 @@ class HowToPlayScene extends Phaser.Scene {
     "Each conversion earns you points.\n\n" +
     "💰 Earn PMNOFO Coins\n" +
     "You get 1 coin per 10 points.\n\n" +
-    "Break your own record to win\n\n" + "a bonus of 10x your high score!\n\n" +
-    "If you beat the leader,\n\n" + "earn 25x your score in coins!\n\n" +
+    "Break your own record to win\n\n" + "a bonus of 10x your base coins!\n\n" +
+    "If you beat the leader,\n\n" + "earn 25x your base coins!\n\n" +
     "📊 Leaderboard\n" +
     "Use the `/leaderboard` command to see\n\n" +
     "the top players.\n\n" +
