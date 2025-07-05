@@ -787,27 +787,31 @@ class GameOverScene extends Phaser.Scene {
         }
         console.log("=== GameOverScene bitti ===");
 
-        // --- Butonlar ---
+        // --- Butonlar (Alt Alta Düzenlenmiş) ---
         const btnY = 360;
-        const btnSpacing = 170;
+        const btnSpacing = 70; // Butonlar arası dikey mesafe
         const btns = [];
+        
         // Play Again
         const playAgainBtn = this.add.text(this.cameras.main.centerX, btnY, "🔄 Play Again", { font: '24px monospace', color: "#1df", backgroundColor: "#133" })
             .setOrigin(0.5).setPadding(10).setInteractive();
         playAgainBtn.on('pointerdown', () => { this.scene.start('LobbyScene'); });
         btns.push(playAgainBtn);
+        
         // Main Menu
-        const mainMenuBtn = this.add.text(this.cameras.main.centerX - btnSpacing, btnY, "🏠 Main Menu", { font: '24px monospace', color: "#fff", backgroundColor: "#222" })
+        const mainMenuBtn = this.add.text(this.cameras.main.centerX, btnY + btnSpacing, "🏠 Main Menu", { font: '24px monospace', color: "#fff", backgroundColor: "#222" })
             .setOrigin(0.5).setPadding(10).setInteractive();
         mainMenuBtn.on('pointerdown', () => { this.scene.start('LobbyScene'); });
         btns.push(mainMenuBtn);
+        
         // Leaderboard
-        const leaderboardBtn = this.add.text(this.cameras.main.centerX + btnSpacing, btnY, "📊 Leaderboard", { font: '24px monospace', color: "#ffe349", backgroundColor: "#222" })
+        const leaderboardBtn = this.add.text(this.cameras.main.centerX, btnY + btnSpacing * 2, "📊 Leaderboard", { font: '24px monospace', color: "#ffe349", backgroundColor: "#222" })
             .setOrigin(0.5).setPadding(10).setInteractive();
         leaderboardBtn.on('pointerdown', () => { this.scene.start('LeaderboardScene'); });
         btns.push(leaderboardBtn);
+        
         // Help
-        const helpBtn = this.add.text(this.cameras.main.centerX, btnY + 60, "❓ Help", { font: '22px monospace', color: "#67f", backgroundColor: "#222" })
+        const helpBtn = this.add.text(this.cameras.main.centerX, btnY + btnSpacing * 3, "❓ Help", { font: '22px monospace', color: "#67f", backgroundColor: "#222" })
             .setOrigin(0.5).setPadding(8).setInteractive();
         helpBtn.on('pointerdown', () => { this.scene.start('HowToPlayScene'); });
         btns.push(helpBtn);
