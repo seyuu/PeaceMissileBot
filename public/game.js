@@ -757,10 +757,14 @@ class GameOverScene extends Phaser.Scene {
         this.add.text(this.cameras.main.centerX, 250, `Score: ${data.score}`, { font: '28px monospace', color: "#ffd" }).setOrigin(0.5);
         this.add.text(this.cameras.main.centerX, 290, `PMNOFO Coin: ${data.coins}`, { font: '24px monospace', color: "#3f6" }).setOrigin(0.5);
 
-        // Skoru Firebase'e kaydet
+        // Skoru bot'a kaydet
         console.log("sendScoreToBot çağrılıyor...");
-        await sendScoreToBot(data.score);
-        console.log("sendScoreToBot tamamlandı");
+        try {
+            await sendScoreToBot(data.score);
+            console.log("sendScoreToBot tamamlandı");
+        } catch (error) {
+            console.log("Bot'a skor gönderilemedi, oyun devam ediyor:", error);
+        }
         console.log("=== GameOverScene bitti ===");
 
         const retryBtn = this.add.text(this.cameras.main.centerX, 360, "Play Again", { font: '24px monospace', color: "#1df", backgroundColor: "#133" })
@@ -843,8 +847,12 @@ async function sendScoreToBot(score) {
     }
     
     try {
-        // Bot endpoint'ine skor gönder
-        const botUrl = 'http://localhost:5000/save_score'; // Local test için
+        // Bot URL'ini belirle - production'da Render URL'i kullan
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const botUrl = isLocalhost 
+            ? 'http://localhost:5000/save_score' 
+            : 'https://peacemissile-bot.onrender.com/save_score'; // Bu URL'i Render'da deploy ettikten sonra güncelle
+        
         console.log("Bot URL'ine istek gönderiliyor:", botUrl);
         
         const response = await fetch(botUrl, {
