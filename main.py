@@ -33,11 +33,13 @@ try:
     print("[LOG] Firebase başlatılıyor...")
     
     # Environment variable'dan Firebase key'i al
-    firebase_key_json = os.environ.get('FIREBASE_KEY_JSON')
+    firebase_creds_base64 = os.environ.get('FIREBASE_CREDS_BASE64')
     
-    if firebase_key_json:
-        # Environment variable'dan JSON string'i parse et
+    if firebase_creds_base64:
+        # Base64'ten decode et ve JSON parse et
         import json
+        import base64
+        firebase_key_json = base64.b64decode(firebase_creds_base64).decode('utf-8')
         firebase_key_dict = json.loads(firebase_key_json)
         cred = credentials.Certificate(firebase_key_dict)
     else:
