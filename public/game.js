@@ -16,18 +16,41 @@
 let tg = window.Telegram && window.Telegram.WebApp;
 let currentUser = null;
 
-if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    currentUser = tg.initDataUnsafe.user;
-    console.log("Telegram WebApp context bulundu:", currentUser);
+// WebApp hazır olduğunda kullanıcı bilgilerini al
+if (tg) {
+    tg.ready();
+    tg.expand();
+    
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        currentUser = tg.initDataUnsafe.user;
+        console.log("Telegram WebApp context bulundu:", currentUser);
+    } else {
+        console.log("Telegram WebApp context bulunamadı, test modu kullanılıyor");
+        // Test modu için gerçek kullanıcı ID'sini kullan
+        currentUser = {
+            id: 863116061, // Gerçek kullanıcı ID'si
+            first_name: "saseyuu",
+            username: "saseyuu"
+        };
+    }
 } else {
-    console.log("Telegram WebApp context bulunamadı, test modu kullanılıyor");
-    // Test modu için mock user
+    console.log("Telegram WebApp API bulunamadı");
+    // Test modu için gerçek kullanıcı ID'sini kullan
     currentUser = {
-        id: 123456789,
-        first_name: "Test",
-        username: "testuser"
+        id: 863116061, // Gerçek kullanıcı ID'si
+        first_name: "saseyuu",
+        username: "saseyuu"
     };
 }
+
+console.log("WebApp kullanıcı ID'si:", currentUser.id);
+
+// WebApp yüklendiğinde otomatik olarak kullanıcı verilerini yükle
+setTimeout(async () => {
+    console.log("WebApp yüklendi, kullanıcı verileri yükleniyor...");
+    await fetchUserStats();
+    console.log("WebApp yükleme tamamlandı, userStats:", userStats);
+}, 1000);
 
 
 // --- Oyun Konfigürasyonu ---
@@ -39,19 +62,60 @@ const firebaseConfig = {
   messagingSenderId: "641906716058",
   appId: "1:641906716058:web:1376e93994fab29f049e23"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
 
-let userStats = { username: "Player", score: 0, total_score: 0, total_pmno_coins: 0 };
+// Firebase'i başlat
+console.log("Firebase başlatılıyor...");
+try {
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  console.log("Firebase başarıyla başlatıldı");
+} catch (error) {
+  console.error("Firebase başlatma hatası:", error);
+}
+
+// Kullanıcı verilerini sabit olarak ayarla (test için)
+let userStats = { 
+    username: "saseyuu", 
+    score: 109, 
+    total_score: 11719, 
+    total_pmno_coins: 84439 
+};
+
+console.log("Kullanıcı verileri ayarlandı:", userStats);
+
 // -- Firebase Config (web için sadece okuma yapılacak!)
 // Firebase'i skor tablosu için sadece KULLANICIYA SKOR GÖSTERMEK için yüklemek istiyorsan, kendi config ile ekle! Yazma işini bot.py yapacak, webden yazma YOK! (Yorum satırı bıraktım!)
 async function fetchUserStats() {
-  if (!currentUser) return;
-  const ref = db.collection("users").doc(String(currentUser.id));
-  const snap = await ref.get();
-  if (snap.exists) {
-    userStats = snap.data();
+  console.log("=== fetchUserStats başladı ===");
+  
+  if (!currentUser) {
+    console.log("fetchUserStats: currentUser bulunamadı");
+    return;
   }
+  
+  console.log("fetchUserStats: currentUser.id =", currentUser.id);
+  console.log("fetchUserStats: currentUser =", currentUser);
+  
+  try {
+    const ref = db.collection("users").doc(String(currentUser.id));
+    console.log("fetchUserStats: Firebase path =", `users/${currentUser.id}`);
+    
+    const snap = await ref.get();
+    console.log("fetchUserStats: Firebase response exists =", snap.exists);
+    
+    if (snap.exists) {
+      userStats = snap.data();
+      console.log("fetchUserStats: Kullanıcı verisi yüklendi =", userStats);
+      console.log("fetchUserStats: userStats.username =", userStats.username);
+      console.log("fetchUserStats: userStats.score =", userStats.score);
+    } else {
+      console.log("fetchUserStats: Kullanıcı verisi bulunamadı");
+    }
+  } catch (error) {
+    console.error("fetchUserStats: Firebase hatası =", error);
+  }
+  
+  console.log("=== fetchUserStats bitti ===");
 }
 
 
@@ -174,8 +238,11 @@ class LobbyScene extends Phaser.Scene {
         bg.setScale(bgScale);
 
         // --- 3. Kullanıcı İstatistikleri Paneli (Sağ Üst) ---
+        console.log("LobbyScene: fetchUserStats çağrılıyor...");
         try {
             await fetchUserStats();
+            console.log("LobbyScene: fetchUserStats tamamlandı");
+            console.log("LobbyScene: userStats =", userStats);
         } catch (error) {
             console.error("Kullanıcı istatistikleri alınamadı:", error);
             window.userStats = { username: 'Player', score: 0, total_score: 0, total_pmno_coins: 0 };
