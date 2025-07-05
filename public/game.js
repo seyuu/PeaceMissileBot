@@ -780,7 +780,7 @@ class HowToPlayScene extends Phaser.Scene {
   create() {
     const vars = getScaleVars(this);
     this.add.rectangle(vars.w/2, vars.h/2, vars.w, vars.h, 0x000000, 0.96);
-    this.add.text(vars.w/2, vars.h*0.1, "Amaç ve Kuralar", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
+    this.add.text(vars.w/2, vars.h*0.1, "Rules", { font: `${vars.fontBig}px monospace`, fill: "#fff" }).setOrigin(0.5);
    let msg = "🕊️ Welcome to Peace Missile! 🕊️\n\n" +
     "Turn missiles into doves\n\n" + "and bring peace to the world.\n\n" +
     "Each conversion earns you points.\n\n" +
@@ -870,6 +870,13 @@ async function sendScoreToBot(score) {
             const result = await response.json();
             console.log("Skor başarıyla kaydedildi:", result);
             
+            // Bonus mesajını göster
+            if (result.bonus_message) {
+                console.log("Bonus mesajı:", result.bonus_message);
+                // Bonus mesajını oyuncuya göster
+                showBonusMessage(result.bonus_message);
+            }
+            
             // Kullanıcı verilerini güncelle
             userStats = {
                 score: result.new_score,
@@ -889,6 +896,32 @@ async function sendScoreToBot(score) {
     }
     
     console.log("=== sendScoreToBot bitti ===");
+}
+
+// Bonus mesajını göster
+function showBonusMessage(message) {
+    // GameOverScene'de bonus mesajını göster
+    const gameOverScene = game.scene.getScene('GameOverScene');
+    if (gameOverScene) {
+        const vars = getScaleVars(gameOverScene);
+        const bonusText = gameOverScene.add.text(
+            vars.w/2, 
+            vars.h*0.5, 
+            message, 
+            { 
+                font: '18px monospace', 
+                color: "#ffd700",
+                backgroundColor: "#1a1a1ac9",
+                align: "center",
+                padding: { left: 10, right: 10, top: 5, bottom: 5 }
+            }
+        ).setOrigin(0.5);
+        
+        // 5 saniye sonra sil
+        gameOverScene.time.delayedCall(5000, () => {
+            bonusText.destroy();
+        });
+    }
 }
 
 

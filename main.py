@@ -204,7 +204,36 @@ def save_score():
                     # Yeni skor daha yüksekse güncelle
                     new_score = max(current_score, score)
                     new_total_score = current_total_score + score
-                    coins_earned = score // 10
+                    
+                    # Temel coin hesaplaması
+                    base_coins = score // 10
+                    coins_earned = base_coins
+                    bonus_message = ""
+                    
+                    # High score bonus (100x high score)
+                    if score > current_score:
+                        high_score_bonus = score * 100
+                        coins_earned += high_score_bonus
+                        bonus_message += f"🏆 High Score Bonus: +{high_score_bonus} coins\n"
+                    
+                    # Leader bonus kontrolü (en yüksek skorlu kullanıcı)
+                    try:
+                        # Tüm kullanıcıları al ve en yüksek skoru bul
+                        all_users = db.collection("users").stream()
+                        highest_score = 0
+                        for user in all_users:
+                            user_data = user.to_dict()
+                            if user_data.get('score', 0) > highest_score:
+                                highest_score = user_data.get('score', 0)
+                        
+                        # Eğer bu kullanıcı en yüksek skora sahipse leader bonus
+                        if score >= highest_score and score > current_score:
+                            leader_bonus = score * 250
+                            coins_earned += leader_bonus
+                            bonus_message += f"👑 Leader Bonus: +{leader_bonus} coins\n"
+                    except Exception as e:
+                        print(f"[LOG] Leader bonus hesaplama hatası: {e}")
+                    
                     new_total_coins = current_coins + coins_earned
                     
                     user_ref.update({
@@ -220,7 +249,9 @@ def save_score():
                         "new_score": new_score,
                         "new_total_score": new_total_score,
                         "new_total_coins": new_total_coins,
-                        "coins_earned": coins_earned
+                        "coins_earned": coins_earned,
+                        "bonus_message": bonus_message,
+                        "base_coins": base_coins
                     })
                 else:
                     print(f"[LOG] Kullanıcı bulunamadı: {user_id}")
