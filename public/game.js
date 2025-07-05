@@ -746,17 +746,16 @@ function showSmoke(scene, x, y) {
 
 
 function sendScoreToBot(score) {
-    const user = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.user;
+    const tg = window.Telegram && window.Telegram.WebApp;
+    const initData = tg && tg.initData ? tg.initData : null;
+    if (!initData) {
+        alert("Oturum doğrulaması başarısız! Skor kaydedilemedi.");
+        return;
+    }
     fetch('https://peacebot-641906716058.europe-central2.run.app/save_score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        user_id: user && user.id ? String(user.id) : "anon",
-        username: user && user.username 
-              ? user.username 
-              : (user && user.first_name 
-                  ? user.first_name + (user.last_name ? " " + user.last_name : "") 
-                  : "Player"),
         score: score
       })
     })
