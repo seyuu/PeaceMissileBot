@@ -75,7 +75,7 @@ except Exception as e:
 
 # Rate limiting için basit sistem
 user_last_command = defaultdict(float)
-RATE_LIMIT_SECONDS = 1  # 1 saniye aralık
+RATE_LIMIT_SECONDS = 2  # 2 saniye aralık (daha güvenli)
 
 def check_rate_limit(user_id: str) -> bool:
     """Kullanıcının rate limit'ini kontrol eder."""
@@ -140,13 +140,14 @@ def start_handler(message):
         
         # Geliştirilmiş hoş geldin mesajı
         message_text = (
-            "🎮 <b>Welcome to Peace Missile!</b> 🎮\n\n"
+            "🚀🕊️☮️ <b>PEACE MISSILE</b> ☮️🕊️🚀\n\n"
+            "welcome to peace missile!\n\n"
             "Turn missiles into doves and bring peace to the world!\n\n"
             "Tap the button below to start your mission.\n\n"
             "<b>Commands:</b>\n"
-            "/score - View your scores\n"
-            "/help - Get help\n"
-            "/privacy - Privacy policy"
+            "📊 /score - View your scores\n"
+            "❓ /help - Get help\n"
+            "🔒 /privacy - Privacy policy"
         )
         
         print(f"Mesaj gönderiliyor: chat_id={message.chat.id}")
@@ -170,45 +171,72 @@ def score_handler(message):
         print(f"/score komutu alındı: user_id={message.from_user.id}")
         
         if db is None:
-            bot.send_message(message.chat.id, "Veritabanı mevcut değil. Firebase kimlik bilgilerini kontrol edin.")
+            print("Firebase mevcut değil, mock veri gönderiliyor")
+            score_message = (
+                f"🚀🕊️☮️ <b>PEACE MISSILE BOT</b> ☮️🕊️🚀\n\n"
+                f"🏆 <b>Your Score</b> 🏆\n\n"
+                f"�� <b>High Score:</b> 0\n"
+                f"📊 <b>Total Score:</b> 0\n"
+                f"🪙 <b>PMNOFO Coins:</b> 0\n\n"
+                f"<i>Note: Using mock data (Firebase not connected)</i>"
+            )
+            bot.send_message(message.chat.id, score_message, parse_mode="HTML")
             return
             
         user_id = str(message.from_user.id)
+        print(f"Kullanıcı ID: {user_id}")
+        
         user_doc = db.collection("users").document(user_id).get()
+        print(f"Firebase sorgusu tamamlandı: exists={user_doc.exists}")
+        
         if user_doc.exists:
             user = user_doc.to_dict()
+            print(f"Kullanıcı verisi: {user}")
             if user is not None:  # None kontrolü eklendi
                 score_message = (
+                    f"🚀🕊️☮️ <b>PEACE MISSILE BOT</b> ☮️🕊️🚀\n\n"
                     f"🏆 <b>Your Score</b> 🏆\n\n"
-                    f"<b>High Score:</b> {user.get('score', 0)}\n"
-                    f"<b>Total Score:</b> {user.get('total_score', 0)}\n"
-                    f"<b>PMNOFO Coins:</b> {user.get('total_pmno_coins', 0)}"
+                    f"📈 <b>High Score:</b> {user.get('score', 0)}\n"
+                    f"📊 <b>Total Score:</b> {user.get('total_score', 0)}\n"
+                    f"🪙 <b>PMNOFO Coins:</b> {user.get('total_pmno_coins', 0)}"
                 )
+                print(f"Skor mesajı gönderiliyor: {score_message}")
                 bot.send_message(message.chat.id, score_message, parse_mode="HTML")
+                print("Skor mesajı başarıyla gönderildi")
             else:
-                bot.send_message(message.chat.id, "Kullanıcı verisi bulunamadı.")
+                print("Kullanıcı verisi None")
+                bot.send_message(message.chat.id, "User data not found.")
         else:
+            print("Kullanıcı dokümanı bulunamadı")
             bot.send_message(message.chat.id, "You don't have a score yet. Play first!")
     except Exception as e:
         print(f"HATA (/score): {e}")
+        import traceback
+        traceback.print_exc()
+        # Hata durumunda basit mesaj gönder
+        try:
+            bot.send_message(message.chat.id, "Error getting scores. Please try again.")
+        except:
+            pass
 
 @bot.message_handler(commands=['help'])
 def help_handler(message):
     """Kullanıcıya yardım bilgilerini gönderir."""
     try:
         help_text = (
-            "🎮 <b>Peace Missile Bot</b> 🎮\n\n"
-            "<b>Komutlar:</b>\n"
-            "/start - Oyunu başlat\n"
-            "/score - Skorlarınızı görüntüle\n"
-            "/help - Bu yardım mesajı\n\n"
-            "<b>Nasıl Oynanır:</b>\n"
-            "• Füzeleri güvercinlere çevirin\n"
-            "• Barış için puan kazanın\n"
-            "• Yüksek skor yapın!\n\n"
-            "<b>Gizlilik:</b>\n"
-            "Sadece oyun skorlarınız kaydedilir.\n"
-            "Kişisel bilgileriniz paylaşılmaz."
+            "🚀🕊️☮️ <b>PEACE MISSILE BOT</b> ☮️🕊️🚀\n\n"
+            "🎮🕊️☮️ <b>Commands:</b> ☮️🕊️🎮\n"
+            "🚀 /start - Start the game\n"
+            "📊 /score - View your scores\n"
+            "❓ /help - This help message\n"
+            "🔒 /privacy - Privacy policy\n\n"
+            "🎯 <b>How to Play:</b>\n"
+            "• Convert missiles into doves\n"
+            "• Earn points for peace\n"
+            "• Beat your high score!\n\n"
+            "🔒 <b>Privacy:</b>\n"
+            "Only your game scores are saved.\n"
+            "Your personal data is not shared."
         )
         bot.send_message(message.chat.id, help_text, parse_mode="HTML")
     except Exception as e:
@@ -219,12 +247,13 @@ def privacy_handler(message):
     """Gizlilik politikasını gösterir."""
     try:
         privacy_text = (
-            "🔒 <b>Gizlilik Politikası</b> 🔒\n\n"
-            "• Sadece oyun skorlarınız kaydedilir\n"
-            "• Kişisel bilgileriniz paylaşılmaz\n"
-            "• Verileriniz güvenli şekilde saklanır\n"
-            "• Üçüncü taraflarla paylaşılmaz\n\n"
-            "Daha fazla bilgi için: /help"
+            "🚀🕊️☮️ <b>PEACE MISSILE BOT</b> ☮️🕊️🚀\n\n"
+            "🔒 <b>Privacy Policy</b> 🔒\n\n"
+            "✅ Only your game scores are saved\n"
+            "✅ Your personal data is not shared\n"
+            "✅ Your data is stored securely\n"
+            "✅ Not shared with third parties\n\n"
+            "For more info: /help"
         )
         bot.send_message(message.chat.id, privacy_text, parse_mode="HTML")
     except Exception as e:
@@ -357,15 +386,32 @@ if __name__ == "__main__":
         bot_info = bot.get_me()
         print(f"Bot başarıyla bağlandı: @{bot_info.username}")
         
-        # Production için webhook modu
-        webhook_url = f"{SERVER_URL}/{BOT_TOKEN}"
-        bot.remove_webhook()
-        bot.set_webhook(url=webhook_url)
-        print(f"Webhook ayarlandı: {webhook_url}")
-        
-        # Flask uygulamasını başlat (webhook için)
-        print("Flask uygulaması başlatılıyor (webhook modu)...")
-        app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)), debug=False)
+        # Production'da webhook, development'ta polling kullan
+        if os.environ.get("ENVIRONMENT") == "production":
+            print("Production modu: Webhook başlatılıyor...")
+            webhook_url = f"{SERVER_URL}/{BOT_TOKEN}"
+            bot.remove_webhook()
+            bot.set_webhook(url=webhook_url)
+            print(f"Webhook ayarlandı: {webhook_url}")
+            
+            # Flask uygulamasını başlat
+            app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)), debug=False)
+        else:
+            print("Development modu: Polling başlatılıyor...")
+            bot.remove_webhook()
+            
+            # Flask uygulamasını ayrı thread'de çalıştır
+            import threading
+            def run_flask():
+                app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)), debug=False)
+            
+            flask_thread = threading.Thread(target=run_flask, daemon=True)
+            flask_thread.start()
+            print("Flask uygulaması başlatıldı")
+            
+            # Bot polling'i başlat
+            print("Bot polling başlatılıyor...")
+            bot.polling(none_stop=True, timeout=60)
         
     except Exception as e:
         print(f"Bot başlatılırken hata: {e}")
