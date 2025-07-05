@@ -65,9 +65,10 @@ const firebaseConfig = {
 
 // Firebase'i başlat
 console.log("Firebase başlatılıyor...");
+let db = null;
 try {
   firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+  db = firebase.firestore();
   console.log("Firebase başarıyla başlatıldı");
 } catch (error) {
   console.error("Firebase başlatma hatası:", error);
