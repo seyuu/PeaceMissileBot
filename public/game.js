@@ -14,11 +14,20 @@
 
 // Telegram WebApp context kontrolü
 let tg = window.Telegram && window.Telegram.WebApp;
-if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user) {
-    document.body.innerHTML = "<div style='color:white;font-size:22px;padding:40px;text-align:center;background:#222'>Lütfen oyunu Telegram uygulamasından başlat!</div>";
-    throw "Telegram WebApp context yok!";
+let currentUser = null;
+
+if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+    currentUser = tg.initDataUnsafe.user;
+    console.log("Telegram WebApp context bulundu:", currentUser);
+} else {
+    console.log("Telegram WebApp context bulunamadı, test modu kullanılıyor");
+    // Test modu için mock user
+    currentUser = {
+        id: 123456789,
+        first_name: "Test",
+        username: "testuser"
+    };
 }
-let currentUser = tg.initDataUnsafe.user;
 
 
 // --- Oyun Konfigürasyonu ---
@@ -748,19 +757,33 @@ function showSmoke(scene, x, y) {
 function sendScoreToBot(score) {
     const tg = window.Telegram && window.Telegram.WebApp;
     const initData = tg && tg.initData ? tg.initData : null;
+    
     if (!initData) {
-        alert("Oturum doğrulaması başarısız! Skor kaydedilemedi.");
+        console.log("Telegram initData bulunamadı, skor kaydedilemedi (test modu)");
         return;
     }
+    
+    console.log("Skor gönderiliyor:", score);
     fetch('https://peacebot-641906716058.europe-central2.run.app/save_score', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-Telegram-Init-Data': initData // <-- EKLEDİK!
+            'X-Telegram-Init-Data': initData
         },
         body: JSON.stringify({ score: score })
     })
-    .then(r => r.json()).then(console.log).catch(console.error);
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log("Skor başarıyla kaydedildi:", data);
+    })
+    .catch(error => {
+        console.error("Skor kaydedilirken hata:", error);
+    });
 }
 
 
