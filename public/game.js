@@ -752,7 +752,8 @@ class GameOverScene extends Phaser.Scene {
         this.add.text(this.cameras.main.centerX, 250, `Score: ${data.score}`, { font: '28px monospace', color: "#ffd" }).setOrigin(0.5);
         this.add.text(this.cameras.main.centerX, 290, `PMNOFO Coin: ${data.coins}`, { font: '24px monospace', color: "#3f6" }).setOrigin(0.5);
 
-        sendScoreToBot(data.score); // veya data.coins göndereceksen onu da ekle!
+        // Skoru Firebase'e kaydet
+        await sendScoreToBot(data.score);
 
         const retryBtn = this.add.text(this.cameras.main.centerX, 360, "Play Again", { font: '24px monospace', color: "#1df", backgroundColor: "#133" })
             .setOrigin(0.5).setPadding(10).setInteractive();
@@ -823,36 +824,80 @@ function showSmoke(scene, x, y) {
 }
 
 
-function sendScoreToBot(score) {
-    const tg = window.Telegram && window.Telegram.WebApp;
-    const initData = tg && tg.initData ? tg.initData : null;
+async function sendScoreToBot(score) {
+    console.log("=== sendScoreToBot başladı ===");
+    console.log("Gönderilecek skor:", score);
+    console.log("Mevcut kullanıcı:", currentUser);
     
-    if (!initData) {
-        console.log("Telegram initData bulunamadı, skor kaydedilemedi (test modu)");
+    if (!currentUser || !currentUser.id) {
+        console.log("Kullanıcı bilgisi bulunamadı, skor kaydedilemedi");
         return;
     }
     
-    console.log("Skor gönderiliyor:", score);
-    fetch('https://peacebot-641906716058.europe-central2.run.app/save_score', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Telegram-Init-Data': initData
-        },
-        body: JSON.stringify({ score: score })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+        // Firebase'e doğrudan kaydet
+        const userRef = db.collection("users").doc(String(currentUser.id));
+        const userDoc = await userRef.get();
+        
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            const currentScore = userData.score || 0;
+            const currentTotalScore = userData.total_score || 0;
+            const currentCoins = userData.total_pmno_coins || 0;
+            
+            // Yeni skor daha yüksekse güncelle
+            const newScore = Math.max(currentScore, score);
+            const newTotalScore = currentTotalScore + score;
+            const coinsEarned = Math.floor(score / 10);
+            const newTotalCoins = currentCoins + coinsEarned;
+            
+            console.log("Mevcut veriler:", {
+                score: currentScore,
+                total_score: currentTotalScore,
+                total_pmno_coins: currentCoins
+            });
+            
+            console.log("Yeni veriler:", {
+                score: newScore,
+                total_score: newTotalScore,
+                total_pmno_coins: newTotalCoins,
+                coins_earned: coinsEarned
+            });
+            
+            // Firebase'e kaydet
+            await userRef.update({
+                score: newScore,
+                total_score: newTotalScore,
+                total_pmno_coins: newTotalCoins
+            });
+            
+            console.log("Skor başarıyla Firebase'e kaydedildi!");
+            
+            // Kullanıcı verilerini güncelle
+            userStats = {
+                score: newScore,
+                total_score: newTotalScore,
+                total_pmno_coins: newTotalCoins,
+                username: userData.username
+            };
+            
+        } else {
+            console.log("Kullanıcı dokümanı bulunamadı, yeni kullanıcı oluşturuluyor");
+            const coinsEarned = Math.floor(score / 10);
+            await userRef.set({
+                username: currentUser.username || "Player",
+                score: score,
+                total_score: score,
+                total_pmno_coins: coinsEarned
+            });
+            console.log("Yeni kullanıcı oluşturuldu ve skor kaydedildi!");
         }
-        return response.json();
-    })
-    .then(data => {
-        console.log("Skor başarıyla kaydedildi:", data);
-    })
-    .catch(error => {
-        console.error("Skor kaydedilirken hata:", error);
-    });
+        
+    } catch (error) {
+        console.error("Firebase'e skor kaydedilirken hata:", error);
+    }
+    
+    console.log("=== sendScoreToBot bitti ===");
 }
 
 
