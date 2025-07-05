@@ -153,6 +153,11 @@ def privacy_handler(message):
     )
     bot.send_message(message.chat.id, privacy_text, parse_mode="HTML")
 
+# Health check endpoint
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy", "bot": "running"})
+
 # Skor kaydetme endpoint'i
 @app.route('/save_score', methods=['POST'])
 def save_score():
@@ -220,9 +225,14 @@ def save_score():
 
 if __name__ == "__main__":
     print("[LOG] Bot başlatılıyor...")
+    
+    # Port'u ortam değişkeninden al, varsayılan 5000
+    port = int(os.environ.get('PORT', 5000))
+    print(f"[LOG] Flask port: {port}")
+    
     # Flask'ı ayrı thread'de çalıştır
     import threading
-    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, debug=False))
+    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=port, debug=False))
     flask_thread.daemon = True
     flask_thread.start()
     
