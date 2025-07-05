@@ -10,6 +10,8 @@ import json
 from urllib.parse import unquote, parse_qs
 import telebot
 from telebot.types import WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
+from collections import defaultdict
+import time
 
 # --- 1. AYARLAR VE KONFİGÜRASYON ---
 BOT_TOKEN = os.environ.get("TELEGRAM_TOKEN")
@@ -71,6 +73,21 @@ except Exception as e:
     print(f"UYARI: Firebase başlatılamadı: {e}")
     print("Bot Firebase olmadan çalışacak (sadece test için)")
 
+# Rate limiting için basit sistem
+user_last_command = defaultdict(float)
+RATE_LIMIT_SECONDS = 1  # 1 saniye aralık
+
+def check_rate_limit(user_id: str) -> bool:
+    """Kullanıcının rate limit'ini kontrol eder."""
+    current_time = time.time()
+    last_time = user_last_command.get(str(user_id), 0)
+    
+    if current_time - last_time < RATE_LIMIT_SECONDS:
+        return False
+    
+    user_last_command[str(user_id)] = current_time
+    return True
+
 def escape_markdown(text: str) -> str:
     """
     Telegram MarkdownV2 formatına göre özel karakterleri kaçırır.
@@ -88,6 +105,10 @@ def escape_markdown(text: str) -> str:
 @bot.message_handler(commands=['start'])
 def start_handler(message):
     try:
+        # Rate limiting kontrolü
+        if not check_rate_limit(message.from_user.id):
+            return
+        
         print(f"/start komutu alındı: user_id={message.from_user.id}, chat_id={message.chat.id}")
         user_id = str(message.from_user.id)
         first_name = message.from_user.first_name or ""
@@ -117,11 +138,19 @@ def start_handler(message):
         markup = ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add(KeyboardButton("🚀 Play Peace Missile!", web_app=WebAppInfo(url=WEB_APP_URL)))
         
-        # Basit ve temiz hoş geldin mesajı
-        message_text = "Welcome to Peace Missile\\! 🚀\n\nTap the button below to start your mission\\!"
+        # Geliştirilmiş hoş geldin mesajı
+        message_text = (
+            "🎮 <b>Welcome to Peace Missile!</b> 🎮\n\n"
+            "Turn missiles into doves and bring peace to the world!\n\n"
+            "Tap the button below to start your mission.\n\n"
+            "<b>Commands:</b>\n"
+            "/score - View your scores\n"
+            "/help - Get help\n"
+            "/privacy - Privacy policy"
+        )
         
         print(f"Mesaj gönderiliyor: chat_id={message.chat.id}")
-        bot.send_message(message.chat.id, message_text, reply_markup=markup, parse_mode="MarkdownV2")
+        bot.send_message(message.chat.id, message_text, reply_markup=markup, parse_mode="HTML")
         print("Mesaj başarıyla gönderildi")
         
     except Exception as e:
@@ -162,6 +191,44 @@ def score_handler(message):
             bot.send_message(message.chat.id, "You don't have a score yet. Play first!")
     except Exception as e:
         print(f"HATA (/score): {e}")
+
+@bot.message_handler(commands=['help'])
+def help_handler(message):
+    """Kullanıcıya yardım bilgilerini gönderir."""
+    try:
+        help_text = (
+            "🎮 <b>Peace Missile Bot</b> 🎮\n\n"
+            "<b>Komutlar:</b>\n"
+            "/start - Oyunu başlat\n"
+            "/score - Skorlarınızı görüntüle\n"
+            "/help - Bu yardım mesajı\n\n"
+            "<b>Nasıl Oynanır:</b>\n"
+            "• Füzeleri güvercinlere çevirin\n"
+            "• Barış için puan kazanın\n"
+            "• Yüksek skor yapın!\n\n"
+            "<b>Gizlilik:</b>\n"
+            "Sadece oyun skorlarınız kaydedilir.\n"
+            "Kişisel bilgileriniz paylaşılmaz."
+        )
+        bot.send_message(message.chat.id, help_text, parse_mode="HTML")
+    except Exception as e:
+        print(f"HATA (/help): {e}")
+
+@bot.message_handler(commands=['privacy'])
+def privacy_handler(message):
+    """Gizlilik politikasını gösterir."""
+    try:
+        privacy_text = (
+            "🔒 <b>Gizlilik Politikası</b> 🔒\n\n"
+            "• Sadece oyun skorlarınız kaydedilir\n"
+            "• Kişisel bilgileriniz paylaşılmaz\n"
+            "• Verileriniz güvenli şekilde saklanır\n"
+            "• Üçüncü taraflarla paylaşılmaz\n\n"
+            "Daha fazla bilgi için: /help"
+        )
+        bot.send_message(message.chat.id, privacy_text, parse_mode="HTML")
+    except Exception as e:
+        print(f"HATA (/privacy): {e}")
 
 # --- 4. WEB API ENDPOINT'LERİ (FLASK) ---
 def validate_telegram_data(init_data: str) -> dict | None:
@@ -259,6 +326,25 @@ def set_webhook():
 @app.route("/")
 def index():
     return "Backend is running!", 200
+
+@app.route("/health")
+def health_check():
+    """Bot'un sağlık durumunu kontrol eder."""
+    try:
+        # Bot bağlantısını kontrol et
+        bot_info = bot.get_me()
+        return jsonify({
+            "status": "healthy",
+            "bot_username": bot_info.username,
+            "timestamp": time.time(),
+            "firebase_status": "connected" if db is not None else "disconnected"
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": time.time()
+        }), 500
 
 if __name__ == "__main__":
     print("Bot başlatılıyor...")
